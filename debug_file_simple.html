@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>파일 업로드 테스트</title>
+</head>
+<body>
+    <h1>파일 업로드 디버깅</h1>
+    
+    <input type="file" id="testFileInput" accept=".json,.csv,.xlsx" multiple>
+    <button onclick="testClick()">파일 선택 버튼</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        console.log('디버깅 스크립트 시작');
+        
+        function testClick() {
+            console.log('버튼 클릭됨');
+            document.getElementById('testFileInput').click();
+        }
+        
+        document.getElementById('testFileInput').addEventListener('change', function(event) {
+            console.log('파일 선택됨!', event.target.files);
+            const result = document.getElementById('result');
+            
+            if (event.target.files.length > 0) {
+                result.innerHTML = '<h2>선택된 파일:</h2>';
+                for (let i = 0; i < event.target.files.length; i++) {
+                    const file = event.target.files[i];
+                    result.innerHTML += `<p>파일 ${i+1}: ${file.name} (${file.size} bytes)</p>`;
+                    console.log(`파일 ${i+1}:`, file);
+                }
+            } else {
+                result.innerHTML = '<p>파일이 선택되지 않았습니다.</p>';
+            }
+        });
+        
+        console.log('디버깅 스크립트 완료');
+    </script>
+</body>
+</html>

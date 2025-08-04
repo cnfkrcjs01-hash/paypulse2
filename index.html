@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PayPulse - AI 인건비 관리 시스템</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="file_management_styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -25,14 +26,31 @@
             </div>
 
             <div class="menu-section">
-                <div class="menu-title">데이터 관리</div>
+                <div class="menu-title">인건비 관리</div>
+
                 <div class="menu-item" data-page="data-center">
+                    <i class="fas fa-chart-line"></i>
+                    <span>종합 인건비</span>
+                </div>
+                <div class="menu-item" data-page="direct-labor">
+                    <i class="fas fa-hard-hat"></i>
+                    <span>직접 인건비</span>
+                </div>
+                <div class="menu-item" data-page="indirect-labor">
+                    <i class="fas fa-briefcase"></i>
+                    <span>간접 인건비</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">데이터 관리</div>
+                <div class="menu-item" data-page="employee">
                     <i class="fas fa-database"></i>
                     <span>통합 데이터 업로드</span>
                 </div>
-                <div class="menu-item" data-page="employee">
-                    <i class="fas fa-users"></i>
-                    <span>직원 정보 관리</span>
+                <div class="menu-item" data-page="upload-history">
+                    <i class="fas fa-history"></i>
+                    <span>업로드 화면</span>
                 </div>
             </div>
 
@@ -101,10 +119,10 @@
             <div class="dashboard" id="main-dashboard">
                 <div class="card">
                     <div class="card-icon">
-                        <i class="fas fa-database"></i>
+                        <i class="fas fa-chart-line"></i>
                     </div>
-                    <h3>통합 데이터 업로드</h3>
-                    <p>급여/상여 대장, 전문분석 데이터, 직원 정보를 한 곳에서 업로드하고 관리합니다.</p>
+                    <h3>종합 인건비</h3>
+                    <p>급여/상여 대장, 전문분석 데이터, 직원 정보를 통합하여 종합적인 인건비를 관리합니다.</p>
                     <br>
                     <button class="btn" onclick="switchPage('data-center')">
                         <i class="fas fa-arrow-right"></i>
@@ -157,6 +175,959 @@
         </div>
     </div>
 
+    <!-- Chart.js for dashboard visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="script.js"></script>
+    
+    <!-- 표준 JavaScript 파일 업로드 시스템 -->
+    <script>
+        // 페이지 로드 완료 후 시스템 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ PayPulse 메인 시스템 로드 완료');
+            
+            // 기존 시스템 초기화 시도
+            if (typeof initializeUnifiedUpload === 'function') {
+                try {
+                    initializeUnifiedUpload();
+                    console.log('✅ 통합 업로드 시스템 초기화 완료');
+                } catch (error) {
+                    console.log('⚠️ 통합 업로드 시스템 초기화 실패:', error.message);
+                }
+            }
+            
+            // 표준 방식으로 파일 업로드 버튼 수정 (지연 실행)
+            setTimeout(() => {
+                initializeStandardFileUpload();
+            }, 1000);
+        });
+        
+        // 표준 JavaScript로 파일 업로드 시스템 초기화
+        function initializeStandardFileUpload() {
+            console.log('🔧 표준 방식으로 버튼 수정 시작...');
+
+            // 모든 버튼을 텍스트로 찾기
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const fileButtons = buttons.filter(btn => 
+                btn.textContent.includes('파일 선택') || 
+                btn.textContent.includes('파일') ||
+                btn.getAttribute('data-action') === 'select-file' ||
+                btn.classList.contains('upload-btn')
+            );
+
+            console.log('발견된 파일 업로드 버튼:', fileButtons.length, '개');
+
+            fileButtons.forEach((btn, index) => {
+                console.log(`버튼 ${index + 1}:`, btn.textContent.trim());
+                
+                // 기존 이벤트 모두 제거
+                const newBtn = btn.cloneNode(true);
+                
+                // 새로운 클릭 이벤트
+                newBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('🔥 파일 선택 버튼 클릭됨!');
+                    
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json,.txt';
+                    input.style.display = 'none';
+                    
+                    input.addEventListener('change', function(event) {
+                        const file = event.target.files[0];
+                        if (!file) return;
+                        
+                        // 파일 형식 검증
+                        const allowedTypes = ['application/json', 'text/plain', 'text/json'];
+                        const allowedExtensions = ['.json', '.txt'];
+                        const isValidType = allowedTypes.includes(file.type) || 
+                                          allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+                        
+                        if (!isValidType) {
+                            alert('❌ 지원하지 않는 파일 형식입니다.\n\nJSON 파일(.json) 또는 텍스트 파일(.txt)만 업로드 가능합니다.');
+                            return;
+                        }
+                        
+                        // 파일 크기 검증 (10MB)
+                        if (file.size > 10 * 1024 * 1024) {
+                            alert('❌ 파일 크기가 너무 큽니다.\n\n최대 10MB까지 업로드 가능합니다.');
+                            return;
+                        }
+                        
+                        console.log('📁 파일 선택됨:', file.name, `(${Math.round(file.size/1024)}KB)`);
+                        
+                        const reader = new FileReader();
+                        reader.addEventListener('load', function(e) {
+                            try {
+                                let content = e.target.result;
+                                // 🔧 초강력 JSON 정리 시스템 (첫 번째 방식)
+                                console.log('🔧 첫 번째 방식: 기본 정리');
+                                content = content.replace(/^\uFEFF/, ''); // BOM 제거
+                                content = content.replace(/:\s*NaN/g, ': null');
+                                content = content.replace(/:\s*undefined/g, ': null');
+                                content = content.replace(/:\s*Infinity/g, ': null');
+                                content = content.replace(/:\s*-Infinity/g, ': null');
+                                content = content.replace(/,(\s*[}\]])/g, '$1'); // 마지막 쉼표 제거
+                                content = content.replace(/'/g, '"'); // 작은따옴표를 큰따옴표로
+                                
+                                // 추가 구문 정리
+                                content = content.replace(/}(\s*)"/g, '},$1"'); // } 다음에 바로 " 오는 경우
+                                content = content.replace(/}(\s*){/g, '},$1{'); // } 다음에 바로 { 오는 경우
+                                
+                                console.log('📋 첫 번째 방식 정리 완료:', content.substring(0, 200) + '...');
+                                
+                                // 안전 파싱
+                                let data;
+                                try {
+                                    data = JSON.parse(content);
+                                    console.log('✅ 첫 번째 방식 파싱 성공!');
+                                } catch (error) {
+                                    console.log('❌ 첫 번째 방식 파싱 실패, 재시도 중...');
+                                    // 더 공격적인 정리
+                                    const cleanContent = content.replace(/\s+/g, ' ').replace(/,(\s*[}\]])/g, '$1');
+                                    data = JSON.parse(cleanContent);
+                                    console.log('✅ 첫 번째 방식 재시도 성공!');
+                                }
+                                
+                                // 데이터 검증
+                                if (!Array.isArray(data)) {
+                                    throw new Error('JSON 데이터는 배열 형태여야 합니다.');
+                                }
+                                
+                                if (data.length === 0) {
+                                    throw new Error('업로드된 파일에 데이터가 없습니다.');
+                                }
+                                
+                                // 전역 변수에 저장
+                                window.payrollData = data;
+                                window.payrollFileInfo = {
+                                    name: file.name,
+                                    size: file.size,
+                                    recordCount: data.length,
+                                    uploadDate: new Date()
+                                };
+                                
+                                console.log('✅ 업로드 성공:', data.length, '개');
+                                
+                                const message = `✅ 파일 업로드 성공!\n\n📊 총 ${data.length}개의 급여 데이터가 로드되었습니다.\n📁 파일명: ${file.name}\n💾 파일 크기: ${Math.round(file.size/1024)}KB`;
+                                alert(message);
+                                
+                                // 업로드 성공 이벤트 발생
+                                window.dispatchEvent(new CustomEvent('payrollDataLoaded', {
+                                    detail: {
+                                        data: data,
+                                        recordCount: data.length,
+                                        fileName: file.name,
+                                        success: true
+                                    }
+                                }));
+                                
+                            } catch (error) {
+                                console.error('❌ 오류:', error);
+                                
+                                let errorMessage = '파일 처리 중 오류가 발생했습니다.';
+                                
+                                if (error instanceof SyntaxError) {
+                                    // JSON 구문 오류에 대한 상세한 도움말
+                                    errorMessage = `JSON 형식 오류가 발생했습니다.
+
+🔧 해결 방법:
+1. 파일이 올바른 JSON 배열 형태인지 확인하세요
+   예: [{"이름": "홍길동", "급여": 3000000}, ...]
+
+2. 다음 문제들을 확인해보세요:
+   - 마지막 항목 뒤에 쉼표(,)가 있는지
+   - 따옴표가 올바르게 닫혔는지
+   - 중괄호 {}와 대괄호 []가 올바르게 매칭되는지
+
+3. 온라인 JSON 검증기를 사용해보세요
+   (jsonlint.com 등)
+
+상세 오류: ${error.message}`;
+                                } else {
+                                    errorMessage = error.message;
+                                }
+                                
+                                alert('❌ 파일 처리 오류: ' + errorMessage);
+                            }
+                        });
+                        
+                        reader.addEventListener('error', function() {
+                            console.error('❌ 파일 읽기 실패');
+                            alert('❌ 파일 읽기 실패');
+                        });
+                        
+                        reader.readAsText(file, 'utf-8');
+                    });
+                    
+                    document.body.appendChild(input);
+                    input.click();
+                    document.body.removeChild(input);
+                });
+                
+                // 버튼 교체
+                btn.parentNode.replaceChild(newBtn, btn);
+                console.log('✅ 버튼 교체 완료:', newBtn.textContent.trim());
+            });
+
+            console.log('🎉 모든 파일 업로드 버튼 수정 완료!');
+            
+            // data-action 속성이 있는 버튼들도 처리
+            console.log('🔧 data-action 버튼들 처리 중...');
+
+            const dataActionButtons = document.querySelectorAll('[data-action*="file"], [data-action*="upload"], [data-action*="select"]');
+
+            dataActionButtons.forEach(btn => {
+                console.log('data-action 버튼 발견:', btn.getAttribute('data-action'));
+                
+                // 중복 이벤트 방지
+                if (!btn.hasAttribute('data-action-processed')) {
+                    btn.setAttribute('data-action-processed', 'true');
+                    
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('🔥 data-action 버튼 클릭됨!');
+                        
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.json,.txt';
+                        input.style.display = 'none';
+                        
+                        input.onchange = function(evt) {
+                            const file = evt.target.files[0];
+                            if (!file) return;
+                            
+                            console.log('📁 data-action 파일 선택됨:', file.name);
+                            
+                            const reader = new FileReader();
+                            reader.onload = function(event) {
+                                try {
+                                    let content = event.target.result;
+                                    // NaN 값 및 BOM 처리
+                                    // 🔧 초강력 JSON 정리 시스템
+                                    console.log('🔧 1단계: 기본 정리 시작');
+                                    content = content.replace(/^\uFEFF/, ''); // BOM 제거
+                                    content = content.replace(/:\s*NaN/g, ': null');
+                                    content = content.replace(/:\s*undefined/g, ': null');
+                                    content = content.replace(/:\s*Infinity/g, ': null');
+                                    content = content.replace(/:\s*-Infinity/g, ': null');
+                                    
+                                    console.log('🔧 2단계: 고급 구문 정리');
+                                    // 잘못된 쉼표 패턴 수정
+                                    content = content.replace(/,(\s*[}\]])/g, '$1'); // 마지막 쉼표 제거
+                                    content = content.replace(/([}\]])\s*,\s*([}\]])/g, '$1$2'); // 연속 쉼표 제거
+                                    content = content.replace(/,\s*,/g, ','); // 중복 쉼표 제거
+                                    
+                                    console.log('🔧 3단계: 따옴표 및 괄호 정리');
+                                    content = content.replace(/'/g, '"'); // 작은따옴표를 큰따옴표로
+                                    content = content.replace(/([^\\])"/g, '$1"'); // 이스케이프되지 않은 따옴표 정리
+                                    
+                                    console.log('🔧 4단계: 누락된 구분자 추가');
+                                    // 객체/배열 구분자 문제 해결
+                                    content = content.replace(/}(\s*)"/g, '},$1"'); // } 다음에 바로 " 오는 경우
+                                    content = content.replace(/}(\s*){/g, '},$1{'); // } 다음에 바로 { 오는 경우
+                                    content = content.replace(/](\s*)"/g, '],$1"'); // ] 다음에 바로 " 오는 경우
+                                    content = content.replace(/](\s*)\[/g, '],$1['); // ] 다음에 바로 [ 오는 경우
+                                    
+                                    console.log('🔧 5단계: 최종 정리');
+                                    content = content.replace(/,(\s*[}\]])/g, '$1'); // 다시 한번 마지막 쉼표 제거
+                                    
+                                    console.log('📋 정리된 내용 미리보기:', content.substring(0, 300) + '...');
+                                    
+                                    // 🎯 단계별 안전 파싱 시도
+                                    let data;
+                                    let parseAttempt = 1;
+                                    
+                                    console.log('🎯 파싱 시도 1: 기본 JSON.parse');
+                                    try {
+                                        data = JSON.parse(content);
+                                        console.log('✅ 기본 파싱 성공!');
+                                    } catch (firstError) {
+                                        console.log('❌ 기본 파싱 실패:', firstError.message);
+                                        
+                                        console.log('🎯 파싱 시도 2: 추가 정리 후 재시도');
+                                        try {
+                                            // 더 공격적인 정리
+                                            let cleanContent = content
+                                                .replace(/,(\s*[}\]])/g, '$1') // 마지막 쉼표 제거
+                                                .replace(/([^\\])\\(?!["\\/bfnrt])/g, '$1') // 잘못된 이스케이프 제거
+                                                .replace(/\n/g, ' ') // 줄바꿈을 공백으로
+                                                .replace(/\r/g, '') // 캐리지 리턴 제거
+                                                .replace(/\t/g, ' ') // 탭을 공백으로
+                                                .replace(/\s+/g, ' '); // 연속 공백을 하나로
+                                            
+                                            data = JSON.parse(cleanContent);
+                                            console.log('✅ 추가 정리 후 파싱 성공!');
+                                        } catch (secondError) {
+                                            console.log('❌ 추가 정리 후에도 실패:', secondError.message);
+                                            
+                                            console.log('🎯 파싱 시도 3: 오류 위치 기반 수정');
+                                            try {
+                                                // 오류 위치 정보 추출
+                                                const errorMatch = secondError.message.match(/position (\d+)/);
+                                                if (errorMatch) {
+                                                    const errorPos = parseInt(errorMatch[1]);
+                                                    console.log('🔍 오류 위치:', errorPos);
+                                                    
+                                                    // 오류 위치 주변 내용 확인
+                                                    const beforeError = content.substring(Math.max(0, errorPos - 50), errorPos);
+                                                    const afterError = content.substring(errorPos, Math.min(content.length, errorPos + 50));
+                                                    console.log('🔍 오류 주변:', beforeError + '[HERE]' + afterError);
+                                                    
+                                                    // 간단한 수정 시도
+                                                    let fixedContent = content.substring(0, errorPos) + ',' + content.substring(errorPos);
+                                                    data = JSON.parse(fixedContent);
+                                                    console.log('✅ 오류 위치 수정 후 파싱 성공!');
+                                                } else {
+                                                    throw secondError;
+                                                }
+                                            } catch (thirdError) {
+                                                console.log('❌ 모든 파싱 시도 실패');
+                                                throw new Error(`JSON 파싱 실패 (3회 시도)\n\n원본 오류: ${firstError.message}\n\n해결 방법:\n1. 온라인 JSON 검증기(jsonlint.com)에서 파일 검사\n2. 샘플 JSON 다운로드 후 형식 참고\n3. 텍스트 에디터에서 구문 오류 수정`);
+                                            }
+                                        }
+                                    }
+                                    
+                                    // 데이터 검증
+                                    if (!Array.isArray(data)) {
+                                        throw new Error('JSON 데이터는 배열 형태여야 합니다.');
+                                    }
+                                    
+                                    if (data.length === 0) {
+                                        throw new Error('업로드된 파일에 데이터가 없습니다.');
+                                    }
+                                    
+                                    // 전역 변수에 저장
+                                    window.payrollData = data;
+                                    window.payrollFileInfo = {
+                                        name: file.name,
+                                        size: file.size,
+                                        recordCount: data.length,
+                                        uploadDate: new Date()
+                                    };
+                                    
+                                    console.log('✅ data-action 업로드 성공:', data.length, '개');
+                                    
+                                    const message = `✅ data-action 업로드 성공!\n\n📊 총 ${data.length}개의 급여 데이터가 로드되었습니다.\n📁 파일명: ${file.name}\n💾 파일 크기: ${Math.round(file.size/1024)}KB`;
+                                    alert(message);
+                                    
+                                    // 업로드 성공 이벤트 발생
+                                    window.dispatchEvent(new CustomEvent('payrollDataLoaded', {
+                                        detail: {
+                                            data: data,
+                                            recordCount: data.length,
+                                            fileName: file.name,
+                                            success: true
+                                        }
+                                    }));
+                                    
+                                } catch (error) {
+                                    console.error('❌ data-action 오류:', error);
+                                    alert('❌ 오류: ' + error.message);
+                                }
+                            };
+                            
+                            reader.onerror = function() {
+                                console.error('❌ data-action 파일 읽기 실패');
+                                alert('❌ 파일 읽기 실패');
+                            };
+                            
+                            reader.readAsText(file, 'utf-8');
+                        };
+                        
+                        document.body.appendChild(input);
+                        input.click();
+                        document.body.removeChild(input);
+                    });
+                }
+            });
+
+            console.log('✅ data-action 버튼들 처리 완료!');
+            
+            // 전체 페이지에 이벤트 위임 (최종 보험책)
+            console.log('🔧 전체 페이지 이벤트 위임 설정 중...');
+            
+            document.addEventListener('click', function(e) {
+                const target = e.target;
+                const text = target.textContent || '';
+                
+                // 파일 관련 텍스트가 있는 요소 클릭 시
+                if ((text.includes('파일 선택') || text.includes('파일') || text.includes('업로드')) && 
+                    !target.hasAttribute('data-delegation-processed')) {
+                    
+                    // 중복 처리 방지
+                    target.setAttribute('data-delegation-processed', 'true');
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('🔥 페이지 이벤트 위임으로 파일 업로드 실행!', text.trim());
+                    
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json,.txt';
+                    input.style.display = 'none';
+                    
+                    input.onchange = function(evt) {
+                        const file = evt.target.files[0];
+                        if (!file) return;
+                        
+                        console.log('📁 이벤트 위임 파일 선택됨:', file.name);
+                        
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            try {
+                                let content = event.target.result;
+                                // 강력한 JSON 정리 (이벤트 위임 방식)
+                                content = content.replace(/^\uFEFF/, ''); // BOM 제거
+                                content = content.replace(/:\s*NaN/g, ': null');
+                                content = content.replace(/:\s*undefined/g, ': null');
+                                content = content.replace(/:\s*Infinity/g, ': null');
+                                content = content.replace(/:\s*-Infinity/g, ': null');
+                                content = content.replace(/,(\s*[}\]])/g, '$1'); // 마지막 쉼표 제거
+                                content = content.replace(/'/g, '"'); // 작은따옴표를 큰따옴표로
+                                
+                                console.log('📋 이벤트 위임 파일 내용:', content.substring(0, 200) + '...');
+                                
+                                const data = JSON.parse(content);
+                                
+                                // 데이터 검증
+                                if (!Array.isArray(data)) {
+                                    throw new Error('JSON 데이터는 배열 형태여야 합니다.');
+                                }
+                                
+                                if (data.length === 0) {
+                                    throw new Error('업로드된 파일에 데이터가 없습니다.');
+                                }
+                                
+                                // 전역 변수에 저장
+                                window.payrollData = data;
+                                window.payrollFileInfo = {
+                                    name: file.name,
+                                    size: file.size,
+                                    recordCount: data.length,
+                                    uploadDate: new Date()
+                                };
+                                
+                                console.log('✅ 이벤트 위임 업로드 성공:', data.length, '개');
+                                
+                                const message = `✅ 이벤트 위임 업로드 성공!\n\n📊 총 ${data.length}개의 급여 데이터가 로드되었습니다.\n📁 파일명: ${file.name}\n💾 파일 크기: ${Math.round(file.size/1024)}KB`;
+                                alert(message);
+                                
+                                // 업로드 성공 이벤트 발생
+                                window.dispatchEvent(new CustomEvent('payrollDataLoaded', {
+                                    detail: {
+                                        data: data,
+                                        recordCount: data.length,
+                                        fileName: file.name,
+                                        success: true
+                                    }
+                                }));
+                                
+                            } catch (error) {
+                                console.error('❌ 이벤트 위임 오류:', error);
+                                
+                                let errorMessage = '파일 처리 중 오류가 발생했습니다.';
+                                if (error instanceof SyntaxError) {
+                                    errorMessage = 'JSON 형식이 올바르지 않습니다.';
+                                } else {
+                                    errorMessage = error.message;
+                                }
+                                
+                                alert('❌ 오류: ' + errorMessage);
+                            }
+                        };
+                        
+                        reader.onerror = function() {
+                            console.error('❌ 이벤트 위임 파일 읽기 실패');
+                            alert('❌ 파일 읽기 실패');
+                        };
+                        
+                        reader.readAsText(file, 'utf-8');
+                    };
+                    
+                    document.body.appendChild(input);
+                    input.click();
+                    document.body.removeChild(input);
+                    
+                    return false;
+                }
+            });
+
+            console.log('✅ 전체 페이지 이벤트 위임 설정 완료!');
+            console.log('🎯 이제 파일 선택 버튼을 클릭해보세요!');
+            
+            // 파일 지속성 및 관리 기능 초기화
+            initializeFileManagement();
+        }
+        
+        // 파일 관리 시스템 초기화
+        function initializeFileManagement() {
+            console.log('🗂️ 파일 관리 시스템 초기화 중...');
+            
+            // 로컬 스토리지에서 업로드된 파일 목록 로드
+            loadUploadedFilesList();
+            
+            // 현재 활성 데이터가 있으면 표시
+            if (window.payrollData && window.payrollData.length > 0) {
+                displayCurrentData();
+            }
+        }
+        
+        // 파일 업로드 성공 시 목록에 추가
+        function addToUploadedFilesList(fileInfo, data) {
+            const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+            
+            const newFile = {
+                id: Date.now().toString(),
+                name: fileInfo.name,
+                size: fileInfo.size,
+                recordCount: Array.isArray(data) ? data.length : 1,
+                uploadDate: new Date().toISOString(),
+                data: data // 실제 데이터도 저장
+            };
+            
+            // 중복 파일명 체크 후 추가
+            const existingIndex = uploadedFiles.findIndex(f => f.name === newFile.name);
+            if (existingIndex >= 0) {
+                uploadedFiles[existingIndex] = newFile; // 덮어쓰기
+            } else {
+                uploadedFiles.unshift(newFile); // 맨 앞에 추가
+            }
+            
+            // 최대 10개 파일만 유지
+            if (uploadedFiles.length > 10) {
+                uploadedFiles.splice(10);
+            }
+            
+            localStorage.setItem('uploadedFiles', JSON.stringify(uploadedFiles));
+            loadUploadedFilesList();
+            displayCurrentData();
+            
+            console.log('📝 파일이 목록에 추가되었습니다:', newFile.name);
+        }
+        
+        // 업로드된 파일 목록 로드 및 표시
+        function loadUploadedFilesList() {
+            const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+            const noFilesMessage = document.getElementById('noFilesMessage');
+            const filesList = document.getElementById('filesList');
+            
+            if (uploadedFiles.length === 0) {
+                if (noFilesMessage) noFilesMessage.style.display = 'block';
+                if (filesList) filesList.style.display = 'none';
+                return;
+            }
+            
+            if (noFilesMessage) noFilesMessage.style.display = 'none';
+            if (filesList) {
+                filesList.style.display = 'block';
+                filesList.innerHTML = uploadedFiles.map(file => `
+                    <div class="file-item" data-file-id="${file.id}">
+                        <div class="file-info">
+                            <div class="file-icon">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="file-details">
+                                <h4 class="file-name">${file.name}</h4>
+                                <div class="file-meta">
+                                    <span class="file-size">${Math.round(file.size/1024)}KB</span>
+                                    <span class="file-records">${file.recordCount.toLocaleString()}개 레코드</span>
+                                    <span class="file-date">${new Date(file.uploadDate).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-small" onclick="loadFileData('${file.id}')" title="데이터 로드">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="btn btn-small btn-secondary" onclick="downloadFile('${file.id}')" title="다운로드">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="btn btn-small btn-danger" onclick="deleteFile('${file.id}')" title="삭제">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // 현재 활성 데이터 표시
+        function displayCurrentData() {
+            const currentDataSection = document.getElementById('currentDataSection');
+            if (!window.payrollData || !window.payrollFileInfo) {
+                if (currentDataSection) currentDataSection.style.display = 'none';
+                return;
+            }
+            
+            if (currentDataSection) {
+                currentDataSection.style.display = 'block';
+                
+                // 기본 정보 업데이트
+                const elements = {
+                    currentFileName: window.payrollFileInfo.name,
+                    currentUploadTime: new Date(window.payrollFileInfo.uploadDate || Date.now()).toLocaleString(),
+                    currentTotalRecords: window.payrollData.length.toLocaleString(),
+                    currentTotalColumns: Object.keys(window.payrollData[0] || {}).length
+                };
+                
+                Object.entries(elements).forEach(([id, value]) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value;
+                });
+                
+                // 데이터 미리보기 테이블 생성
+                createDataPreviewTable();
+            }
+        }
+        
+        // 데이터 미리보기 테이블 생성
+        function createDataPreviewTable() {
+            const tableHead = document.getElementById('currentDataTableHead');
+            const tableBody = document.getElementById('currentDataTableBody');
+            
+            if (!tableHead || !tableBody || !window.payrollData) return;
+            
+            const data = window.payrollData;
+            const columns = Object.keys(data[0] || {});
+            const previewData = data.slice(0, 10); // 처음 10개만
+            
+            // 테이블 헤더 생성
+            tableHead.innerHTML = `<tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr>`;
+            
+            // 테이블 바디 생성
+            tableBody.innerHTML = previewData.map(row => 
+                `<tr>${columns.map(col => `<td>${row[col] || '-'}</td>`).join('')}</tr>`
+            ).join('');
+        }
+        
+        // 파일 관리 함수들
+        window.refreshFileList = function() {
+            loadUploadedFilesList();
+            console.log('🔄 파일 목록이 새로고침되었습니다.');
+        };
+        
+        window.loadFileData = function(fileId) {
+            const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+            const file = uploadedFiles.find(f => f.id === fileId);
+            
+            if (file && file.data) {
+                window.payrollData = file.data;
+                window.payrollFileInfo = {
+                    name: file.name,
+                    size: file.size,
+                    recordCount: file.recordCount,
+                    uploadDate: file.uploadDate
+                };
+                
+                displayCurrentData();
+                alert(`✅ "${file.name}" 데이터가 로드되었습니다.\n${file.recordCount}개 레코드`);
+                console.log('📂 파일 데이터 로드 완료:', file.name);
+            }
+        };
+        
+        window.downloadFile = function(fileId) {
+            const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+            const file = uploadedFiles.find(f => f.id === fileId);
+            
+            if (file && file.data) {
+                const blob = new Blob([JSON.stringify(file.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                console.log('💾 파일 다운로드:', file.name);
+            }
+        };
+        
+        window.deleteFile = function(fileId) {
+            const uploadedFiles = JSON.parse(localStorage.getItem('uploadedFiles') || '[]');
+            const file = uploadedFiles.find(f => f.id === fileId);
+            
+            if (file && confirm(`"${file.name}" 파일을 삭제하시겠습니까?`)) {
+                const filteredFiles = uploadedFiles.filter(f => f.id !== fileId);
+                localStorage.setItem('uploadedFiles', JSON.stringify(filteredFiles));
+                loadUploadedFilesList();
+                
+                // 현재 활성 데이터가 삭제된 파일이면 초기화
+                if (window.payrollFileInfo && window.payrollFileInfo.name === file.name) {
+                    window.payrollData = null;
+                    window.payrollFileInfo = null;
+                    displayCurrentData();
+                }
+                
+                alert(`"${file.name}" 파일이 삭제되었습니다.`);
+                console.log('🗑️ 파일 삭제:', file.name);
+            }
+        };
+        
+        window.viewDataDetails = function() {
+            if (!window.payrollData) {
+                alert('활성 데이터가 없습니다.');
+                return;
+            }
+            
+            const data = window.payrollData;
+            const info = window.payrollFileInfo;
+            
+            const details = `
+📊 데이터 상세 정보
+
+📁 파일명: ${info.name}
+📅 업로드 시간: ${new Date(info.uploadDate || Date.now()).toLocaleString()}
+📈 총 레코드 수: ${data.length.toLocaleString()}개
+📋 컬럼 수: ${Object.keys(data[0] || {}).length}개
+💾 파일 크기: ${Math.round(info.size/1024)}KB
+
+🏷️ 사용 가능한 필드:
+${Object.keys(data[0] || {}).slice(0, 10).join(', ')}${Object.keys(data[0] || {}).length > 10 ? '...' : ''}
+
+📊 샘플 데이터:
+${JSON.stringify(data[0], null, 2)}
+            `;
+            
+            alert(details);
+        };
+        
+        window.downloadCurrentData = function() {
+            if (!window.payrollData || !window.payrollFileInfo) {
+                alert('다운로드할 데이터가 없습니다.');
+                return;
+            }
+            
+            const blob = new Blob([JSON.stringify(window.payrollData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = window.payrollFileInfo.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('💾 현재 데이터 다운로드:', window.payrollFileInfo.name);
+        };
+        
+        // 업로드 성공 시 데이터 표시
+        function showUploadSuccess(data, fileName) {
+            console.log('✅ 업로드 성공 화면 표시:', fileName);
+            
+            // 업로드 성공 섹션 표시
+            const successSection = document.getElementById('uploadSuccessSection');
+            if (successSection) {
+                successSection.style.display = 'block';
+                
+                // 기본 정보 업데이트
+                const elements = {
+                    successFileName: fileName,
+                    successRecordCount: data.length.toLocaleString() + '개',
+                    successUploadTime: new Date().toLocaleString(),
+                    successFieldCount: Object.keys(data[0] || {}).length + '개'
+                };
+                
+                Object.entries(elements).forEach(([id, value]) => {
+                    const element = document.getElementById(id);
+                    if (element) element.textContent = value;
+                });
+                
+                // 데이터 미리보기 테이블 생성
+                createSuccessPreviewTable(data);
+                
+                // 필드 정보 생성
+                createFieldsInfo(data[0] || {});
+            }
+        }
+        
+        // 성공 미리보기 테이블 생성
+        function createSuccessPreviewTable(data, showAllFields = false) {
+            const tableHead = document.getElementById('successTableHead');
+            const tableBody = document.getElementById('successTableBody');
+            
+            if (!tableHead || !tableBody || !data.length) return;
+            
+            const allFields = Object.keys(data[0]);
+            const displayFields = showAllFields ? allFields : allFields.slice(0, 5);
+            const previewData = data.slice(0, 5); // 처음 5개 레코드만
+            
+            // 테이블 헤더
+            tableHead.innerHTML = `<tr>${displayFields.map(field => `<th>${field}</th>`).join('')}</tr>`;
+            
+            // 테이블 바디
+            tableBody.innerHTML = previewData.map(row => 
+                `<tr>${displayFields.map(field => `<td>${row[field] || '-'}</td>`).join('')}</tr>`
+            ).join('');
+            
+            // 버튼 상태 업데이트
+            const showAllBtn = document.getElementById('showAllFieldsBtn');
+            const showLessBtn = document.getElementById('showLessFieldsBtn');
+            
+            if (showAllFields) {
+                if (showAllBtn) showAllBtn.style.display = 'none';
+                if (showLessBtn) showLessBtn.style.display = 'inline-block';
+            } else {
+                if (showAllBtn) showAllBtn.style.display = allFields.length > 5 ? 'inline-block' : 'none';
+                if (showLessBtn) showLessBtn.style.display = 'none';
+            }
+        }
+        
+        // 필드 정보 생성
+        function createFieldsInfo(firstRecord) {
+            const fieldsList = document.getElementById('successFieldsList');
+            if (!fieldsList) return;
+            
+            const fields = Object.keys(firstRecord);
+            fieldsList.innerHTML = fields.map(field => {
+                const value = firstRecord[field];
+                const type = typeof value;
+                return `
+                    <div class="field-item">
+                        <span class="field-name">${field}</span>
+                        <span class="field-type">${type}</span>
+                        <span class="field-sample">${value}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 버튼 이벤트 함수들
+        window.showAllFields = function() {
+            if (window.payrollData) {
+                createSuccessPreviewTable(window.payrollData, true);
+            }
+        };
+        
+        window.showLessFields = function() {
+            if (window.payrollData) {
+                createSuccessPreviewTable(window.payrollData, false);
+            }
+        };
+        
+        window.clearUploadedData = function() {
+            if (confirm('업로드된 데이터를 지우시겠습니까?')) {
+                window.payrollData = null;
+                window.payrollFileInfo = null;
+                
+                const successSection = document.getElementById('uploadSuccessSection');
+                if (successSection) successSection.style.display = 'none';
+                
+                console.log('🗑️ 업로드 데이터 삭제 완료');
+            }
+        };
+        
+        window.downloadUploadedData = function() {
+            if (!window.payrollData || !window.payrollFileInfo) {
+                alert('다운로드할 데이터가 없습니다.');
+                return;
+            }
+            
+            const blob = new Blob([JSON.stringify(window.payrollData, null, 2)], { 
+                type: 'application/json;charset=utf-8' 
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = window.payrollFileInfo.name || 'payroll_data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('💾 데이터 다운로드 완료');
+        };
+        
+        // 업로드 성공 이벤트 리스너 수정
+        document.addEventListener('payrollDataLoaded', function(event) {
+            const { data, fileName, recordCount } = event.detail;
+            
+            // 업로드 성공 화면 표시
+            showUploadSuccess(data, fileName);
+        });
+        
+        // 샘플 JSON 다운로드 함수 개선
+        window.downloadSampleJSON = function() {
+            const sampleData = [
+                {
+                    "급여일_급여유형": "2024.01.25 급여_정기급여",
+                    "급여영역": "(주)샘플회사",
+                    "사번": "E2024001",
+                    "성명": "홍길동",
+                    "입사일": 20240101,
+                    "그룹입사일": 20240101,
+                    "성별": "남",
+                    "조직": "인사팀",
+                    "직책": "팀원",
+                    "직급": "대리",
+                    "호봉": "3급",
+                    "기본급": 3000000,
+                    "직책급": 200000,
+                    "식대": 100000,
+                    "교통비": 150000,
+                    "실지급액": 2800000,
+                    "연도": 2024
+                },
+                {
+                    "급여일_급여유형": "2024.01.25 급여_정기급여",
+                    "급여영역": "(주)샘플회사",
+                    "사번": "E2024002",
+                    "성명": "김영희",
+                    "입사일": 20230315,
+                    "그룹입사일": 20230315,
+                    "성별": "여",
+                    "조직": "개발팀",
+                    "직책": "선임",
+                    "직급": "과장",
+                    "호봉": "5급",
+                    "기본급": 4200000,
+                    "직책급": 300000,
+                    "식대": 100000,
+                    "교통비": 150000,
+                    "실지급액": 3850000,
+                    "연도": 2024
+                },
+                {
+                    "급여일_급여유형": "2024.01.25 급여_정기급여",
+                    "급여영역": "(주)샘플회사",
+                    "사번": "E2024003",
+                    "성명": "박철수",
+                    "입사일": 20220701,
+                    "그룹입사일": 20220701,
+                    "성별": "남",
+                    "조직": "영업팀",
+                    "직책": "팀장",
+                    "직급": "차장",
+                    "호봉": "7급",
+                    "기본급": 5500000,
+                    "직책급": 500000,
+                    "식대": 100000,
+                    "교통비": 150000,
+                    "실지급액": 5200000,
+                    "연도": 2024
+                }
+            ];
+            
+            const blob = new Blob([JSON.stringify(sampleData, null, 2)], { 
+                type: 'application/json;charset=utf-8' 
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'payroll_sample.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('📄 샘플 JSON 파일 다운로드 완료');
+            alert('📄 샘플 JSON 파일이 다운로드되었습니다!\n\n이 파일을 참고하여 데이터 형식을 맞춰주세요.');
+        };
+    </script>
 </body>
 </html>

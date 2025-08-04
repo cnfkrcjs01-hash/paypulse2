@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>테스트 페이지</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-box {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-box">
+        <h1>🎉 PayPulse 연결 테스트 성공!</h1>
+        <p>서버가 정상적으로 작동하고 있습니다.</p>
+        <p>현재 시간: <span id="time"></span></p>
+        <button onclick="location.href='/'">메인 페이지로 이동</button>
+    </div>
+    
+    <script>
+        // 시간 표시
+        function updateTime() {
+            document.getElementById('time').textContent = new Date().toLocaleString();
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        console.log('✅ JavaScript가 정상적으로 작동합니다!');
+    </script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+/* 파일 관리 시스템 스타일 */
+.uploaded-files-content {
+    margin-top: 20px;
+}
+
+.no-files-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 2px dashed #ddd;
+}
+
+.no-files-message i {
+    font-size: 3rem;
+    color: #ccc;
+    margin-bottom: 15px;
+}
+
+.files-list {
+    margin-top: 20px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.file-item:hover {
+    border-color: #f55000;
+    box-shadow: 0 2px 8px rgba(245, 80, 0, 0.1);
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff5f0;
+    border-radius: 8px;
+    margin-right: 15px;
+}
+
+.file-icon i {
+    font-size: 1.2rem;
+    color: #f55000;
+}
+
+.file-details h4 {
+    margin: 0 0 5px 0;
+    color: #5c4037;
+    font-size: 1rem;
+}
+
+.file-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.file-meta span {
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: auto;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* 현재 활성 데이터 섹션 */
+.current-data-content {
+    margin-top: 20px;
+}
+
+.data-summary {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+}
+
+.summary-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #f55000;
+}
+
+.data-preview-table {
+    margin-top: 20px;
+}
+
+.data-preview-table h4 {
+    color: #5c4037;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #fff5f0;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+#currentDataTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+#currentDataTable th {
+    background: #fff5f0;
+    color: #5c4037;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+    white-space: nowrap;
+}
+
+#currentDataTable td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eee;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#currentDataTable tr:hover {
+    background: #f8f9fa;
+}
+
+/* 업로드 카드 헤더 개선 */
+.upload-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.upload-card-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.data-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* 업로드 성공 섹션 스타일 */
+.upload-success-content {
+    margin-top: 20px;
+}
+
+.success-summary {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #f55000;
+}
+
+.data-preview-section {
+    margin: 20px 0;
+}
+
+.data-preview-section h4 {
+    color: #5c4037;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #fff5f0;
+}
+
+.preview-controls {
+    margin-bottom: 15px;
+    text-align: right;
+}
+
+.preview-table-container {
+    overflow-x: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.preview-table th {
+    background: #fff5f0;
+    color: #5c4037;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #ddd;
+    white-space: nowrap;
+}
+
+.preview-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eee;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.preview-table tr:hover {
+    background: #f8f9fa;
+}
+
+.fields-info-section h4 {
+    color: #5c4037;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #fff5f0;
+}
+
+.fields-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 10px;
+}
+
+.field-item {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    gap: 15px;
+}
+
+.field-name {
+    font-weight: bold;
+    color: #5c4037;
+    min-width: 100px;
+}
+
+.field-type {
+    background: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    min-width: 60px;
+    text-align: center;
+}
+
+.field-sample {
+    color: #666;
+    font-family: monospace;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.success-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .file-actions {
+        align-self: stretch;
+        justify-content: center;
+    }
+    
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .file-meta {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .data-actions {
+        flex-direction: column;
+    }
+    
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .fields-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .field-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .success-actions {
+        flex-direction: column;
+    }
+}

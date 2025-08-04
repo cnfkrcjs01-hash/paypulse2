@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파일 업로드 테스트</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+        }
+        .test-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .status {
+            background: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 PayPulse 파일 업로드 테스트</h1>
+    
+    <div class="test-area">
+        <h3>📁 파일 선택 테스트</h3>
+        <input type="file" id="testFile" accept=".json,.txt,.csv" />
+        <div class="status" id="status">대기 중...</div>
+        <div class="status" id="fileInfo"></div>
+    </div>
+
+    <div class="test-area">
+        <h3>📤 업로드 테스트 (JSON만)</h3>
+        <button onclick="testUpload()" id="uploadBtn" disabled>업로드 테스트</button>
+        <div class="status" id="uploadStatus">파일을 먼저 선택해주세요</div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        
+        document.getElementById('testFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const statusDiv = document.getElementById('status');
+            const fileInfoDiv = document.getElementById('fileInfo');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            console.log('📁 파일 선택 이벤트:', file);
+            
+            if (!file) {
+                statusDiv.textContent = '❌ 파일이 선택되지 않음';
+                uploadBtn.disabled = true;
+                return;
+            }
+            
+            selectedFile = file;
+            statusDiv.textContent = '✅ 파일 선택됨';
+            fileInfoDiv.innerHTML = `
+                <strong>파일 정보:</strong><br>
+                이름: ${file.name}<br>
+                크기: ${file.size} bytes<br>
+                타입: ${file.type}<br>
+                수정일: ${new Date(file.lastModified).toLocaleString()}
+            `;
+            
+            // JSON 파일인 경우 업로드 버튼 활성화
+            if (file.name.toLowerCase().endsWith('.json')) {
+                uploadBtn.disabled = false;
+            } else {
+                uploadBtn.disabled = true;
+                document.getElementById('uploadStatus').textContent = 'JSON 파일만 업로드 테스트 가능';
+            }
+            
+            // 파일 읽기 테스트
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                console.log('📖 파일 읽기 완료');
+                try {
+                    if (file.name.toLowerCase().endsWith('.json')) {
+                        const data = JSON.parse(event.target.result);
+                        console.log('✅ JSON 파싱 성공:', data.length, '개 레코드');
+                        statusDiv.textContent = `✅ JSON 파싱 성공: ${data.length}개 레코드`;
+                    } else {
+                        console.log('📄 텍스트 파일 읽기 완료');
+                        statusDiv.textContent = '✅ 텍스트 파일 읽기 완료';
+                    }
+                } catch (error) {
+                    console.error('❌ 파일 파싱 오류:', error);
+                    statusDiv.textContent = '❌ 파일 파싱 오류: ' + error.message;
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        async function testUpload() {
+            if (!selectedFile) {
+                alert('파일을 먼저 선택해주세요');
+                return;
+            }
+            
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.textContent = '📤 업로드 중...';
+            
+            try {
+                // 파일 내용 읽기
+                const fileText = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsText(selectedFile);
+                });
+                
+                const data = JSON.parse(fileText);
+                console.log('📊 업로드할 데이터:', data);
+                
+                // API 호출
+                const response = await fetch('/api/payroll/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                console.log('🌐 서버 응답:', result);
+                
+                if (result.success) {
+                    statusDiv.textContent = `✅ 업로드 성공! 파일명: ${result.fileName}`;
+                } else {
+                    statusDiv.textContent = `❌ 업로드 실패: ${result.error}`;
+                }
+                
+            } catch (error) {
+                console.error('❌ 업로드 오류:', error);
+                statusDiv.textContent = `❌ 업로드 오류: ${error.message}`;
+            }
+        }
+        
+        // 콘솔 로그를 화면에도 표시
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+        };
+        
+        console.log('🚀 테스트 페이지 로드 완료');
+    </script>
+</body>
+</html>

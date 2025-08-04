@@ -6,6 +6,1386 @@ let persistentData = {
     dataSource: null
 };
 
+// SafeJSONParser 클래스 - NaN, undefined, Infinity 등을 안전하게 처리
+class SafeJSONParser {
+    /**
+     * NaN, undefined, Infinity 등을 안전하게 처리하는 JSON 파서
+     */
+    static parse(jsonString) {
+        try {
+            // NaN을 null로 변환
+            const cleanedJson = jsonString
+                .replace(/:\s*NaN/g, ': null')
+                .replace(/:\s*undefined/g, ': null')
+                .replace(/:\s*Infinity/g, ': null')
+                .replace(/:\s*-Infinity/g, ': null')
+                .replace(/,\s*}/g, '}')  // 마지막 쉼표 제거
+                .replace(/,\s*]/g, ']'); // 배열 마지막 쉼표 제거
+            
+            return JSON.parse(cleanedJson);
+        } catch (error) {
+            // 더 상세한 오류 분석
+            const errorInfo = this.analyzeJSONError(jsonString, error);
+            throw new Error(`JSON 파싱 오류: ${errorInfo}`);
+        }
+    }
+
+    /**
+     * JSON 오류 분석 및 위치 찾기
+     */
+    static analyzeJSONError(jsonString, error) {
+        const errorMessage = error.message || '';
+        
+        // SyntaxError에서 위치 정보 추출
+        const positionMatch = errorMessage.match(/position (\d+)/);
+        if (positionMatch) {
+            const position = parseInt(positionMatch[1]);
+            const beforeError = jsonString.substring(Math.max(0, position - 50), position);
+            const afterError = jsonString.substring(position, Math.min(jsonString.length, position + 50));
+            
+            return `${errorMessage}\n문제 위치 근처: "${beforeError}[여기]${afterError}"`;
+        }
+        
+        // 일반적인 문제 패턴 확인
+        if (errorMessage.includes('Unexpected token')) {
+            const commonIssues = [
+                { pattern: /NaN/g, issue: 'NaN 값' },
+                { pattern: /undefined/g, issue: 'undefined 값' },
+                { pattern: /Infinity/g, issue: 'Infinity 값' },
+                { pattern: /,\s*}/g, issue: '마지막 쉼표' },
+                { pattern: /,\s*]/g, issue: '배열 마지막 쉼표' }
+            ];
+            
+            for (const { pattern, issue } of commonIssues) {
+                if (pattern.test(jsonString)) {
+                    return `${errorMessage} (${issue} 문제로 추정)`;
+                }
+            }
+        }
+        
+        return errorMessage;
+    }
+
+    /**
+     * 스트리밍 방식으로 대용량 JSON 처리
+     */
+    static parseStream(jsonString, chunkSize = 1024 * 1024) {
+        // 1MB씩 청크로 나누어 처리
+        if (jsonString.length <= chunkSize) {
+            return this.parse(jsonString);
+        }
+        
+        // 대용량 파일은 청크 단위로 전처리 후 파싱
+        let processedJson = '';
+        
+        for (let i = 0; i < jsonString.length; i += chunkSize) {
+            const chunk = jsonString.substring(i, i + chunkSize);
+            // 각 청크에서 NaN 등을 null로 변환
+            const cleanedChunk = chunk
+                .replace(/:\s*NaN/g, ': null')
+                .replace(/:\s*undefined/g, ': null')
+                .replace(/:\s*Infinity/g, ': null')
+                .replace(/:\s*-Infinity/g, ': null');
+            
+            processedJson += cleanedChunk;
+        }
+        
+        return JSON.parse(processedJson);
+    }
+}
+
+// checkDataConnection 함수 정의
+function checkDataConnection() {
+    console.log('데이터 연결 상태 확인');
+    // 데이터 연결 확인 로직 구현
+}
+
+// 페이지별 초기화 함수
+function initializePage(pageName) {
+    console.log('페이지 초기화:', pageName);
+    
+    switch(pageName) {
+        case 'ai-chat':
+            checkDataConnection();
+            break;
+            
+        case 'employee':
+            // 통합 데이터 업로드 페이지 초기화
+            initializeUnifiedUpload();
+            break;
+            
+        case 'upload-history':
+            // 업로드 내역 페이지 초기화
+            loadUploadHistory();
+            break;
+    }
+}
+
+// 디버그 로그 시스템
+let uploadDebugLog = [];
+let currentProcessingStep = '';
+
+// 디버그 로그 추가 함수
+function addUploadLog(message, isError = false) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `${timestamp}: ${message}`;
+    console.log(logMessage);
+    uploadDebugLog.push({ message: logMessage, isError });
+    
+    if (!isError) {
+        currentProcessingStep = message;
+    }
+    
+    // 디버그 로그 UI 업데이트
+    updateDebugLogDisplay();
+}
+
+// 디버그 로그 화면 업데이트
+function updateDebugLogDisplay() {
+    const logContainer = document.getElementById('uploadDebugLog');
+    if (logContainer && uploadDebugLog.length > 0) {
+        const logHtml = uploadDebugLog.map(log => 
+            `<div class="debug-log-item ${log.isError ? 'error' : ''}">${log.message}</div>`
+        ).join('');
+        
+        logContainer.innerHTML = `
+            <div class="debug-log-header">
+                <h3>처리 로그</h3>
+                <button onclick="clearUploadLog()" class="btn-clear-log">지우기</button>
+            </div>
+            <div class="debug-log-content">${logHtml}</div>
+        `;
+        logContainer.style.display = 'block';
+    }
+}
+
+// 로그 지우기
+function clearUploadLog() {
+    uploadDebugLog = [];
+    const logContainer = document.getElementById('uploadDebugLog');
+    if (logContainer) {
+        logContainer.style.display = 'none';
+    }
+}
+
+// 파일 전처리 함수 (NaN 값 처리)
+function preprocessFileContent(content) {
+    addUploadLog('파일 내용 전처리 시작');
+    
+    let processed = content;
+    
+    // 1. NaN 값을 null로 변환
+    const nanCount = (processed.match(/:\s*NaN/g) || []).length;
+    if (nanCount > 0) {
+        processed = processed.replace(/:\s*NaN/g, ': null');
+        addUploadLog(`NaN 값 ${nanCount}개를 null로 변환`);
+    }
+    
+    // 2. undefined 값 처리
+    const undefinedCount = (processed.match(/:\s*undefined/g) || []).length;
+    if (undefinedCount > 0) {
+        processed = processed.replace(/:\s*undefined/g, ': null');
+        addUploadLog(`undefined 값 ${undefinedCount}개를 null로 변환`);
+    }
+    
+    // 3. Infinity 값 처리
+    const infinityCount = (processed.match(/:\s*Infinity/g) || []).length;
+    if (infinityCount > 0) {
+        processed = processed.replace(/:\s*Infinity/g, ': null');
+        processed = processed.replace(/:\s*-Infinity/g, ': null');
+        addUploadLog(`Infinity 값 ${infinityCount}개를 null로 변환`);
+    }
+    
+    // 4. 잘못된 쉼표 제거
+    processed = processed.replace(/,(\s*[}\]])/g, '$1');
+    
+    addUploadLog('파일 내용 전처리 완료');
+    return processed;
+}
+
+// 진행률 표시 함수
+function updateUploadProgress(progress, message = '') {
+    const progressBar = document.getElementById('uploadProgressBar');
+    const progressText = document.getElementById('uploadProgressText');
+    const stepText = document.getElementById('uploadStepText');
+    
+    if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+        if (progress > 10) {
+            progressBar.innerHTML = `<span class="progress-percentage">${progress}%</span>`;
+        }
+    }
+    
+    if (progressText) {
+        progressText.textContent = `${progress}%`;
+    }
+    
+    if (stepText && message) {
+        stepText.textContent = message;
+        currentProcessingStep = message;
+    }
+}
+
+// 통합 데이터 업로드 초기화
+function initializeUnifiedUpload() {
+    console.log('통합 업로드 페이지 초기화 (PayrollFileUploader 모드)');
+    addUploadLog('PayrollFileUploader 시스템 초기화');
+    
+    // PayrollFileUploader 인스턴스 생성
+    if (!globalPayrollUploader) {
+        globalPayrollUploader = new PayrollFileUploader();
+        console.log('✅ PayrollFileUploader 인스턴스 생성 완료');
+        
+        // 페이지가 동적으로 로드된 후 data-action 버튼들 재초기화
+        setTimeout(() => {
+            globalPayrollUploader.initializeEventListeners();
+            console.log('✅ data-action 버튼들 재초기화 완료');
+        }, 100);
+    }
+    
+    // 파일 input 이벤트 리스너 등록
+    const unifiedFileInput = document.getElementById('unifiedFileInput');
+    if (unifiedFileInput) {
+        unifiedFileInput.removeEventListener('change', handleUnifiedFileUpload);
+        unifiedFileInput.addEventListener('change', function(event) {
+            console.log('파일 선택됨:', event.target.files);
+            addUploadLog(`파일 선택됨: ${event.target.files[0]?.name}`);
+            
+            if (event.target.files[0]) {
+                globalPayrollUploader.processFile(event.target.files[0]);
+            }
+            
+            // 입력 필드 초기화 (같은 파일 재선택 가능하도록)
+            event.target.value = '';
+        });
+        console.log('✅ 파일 input 이벤트 리스너 등록 완료');
+    }
+    
+    // 드롭존 이벤트 리스너 등록
+    const unifiedDropZone = document.getElementById('unifiedDropZone');
+    if (unifiedDropZone) {
+        // 드래그 이벤트 처리
+        unifiedDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.add('drag-active');
+        });
+        
+        unifiedDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.remove('drag-active');
+        });
+        
+        unifiedDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.remove('drag-active');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                addUploadLog(`드래그 드롭으로 파일 선택: ${files[0].name}`);
+                globalPayrollUploader.processFile(files[0]);
+            }
+        });
+        
+        unifiedDropZone.addEventListener('click', function() {
+            console.log('드롭존 클릭됨');
+            addUploadLog('파일 선택 대화상자 열기');
+            document.getElementById('unifiedFileInput').click();
+        });
+        
+        console.log('✅ 드롭존 이벤트 리스너 등록 완료');
+    }
+    
+    // payrollDataLoaded 커스텀 이벤트 리스너 등록
+    window.addEventListener('payrollDataLoaded', function(event) {
+        console.log('🎉 payrollDataLoaded 이벤트 수신:', event.detail);
+        addUploadLog('payrollDataLoaded 커스텀 이벤트 발생');
+        
+        // 추가 처리 로직
+        handlePayrollDataLoaded(event.detail);
+    });
+    
+    // 디버그 로그 컨테이너 추가
+    addDebugLogContainer();
+}
+
+// payrollDataLoaded 이벤트 핸들러
+function handlePayrollDataLoaded(result) {
+    console.log('📊 급여 데이터 로드 완료 처리:', result);
+    
+    // 업로드 내역에 추가
+    if (globalPayrollUploader.currentFile && result.data) {
+        addUploadHistoryItem(
+            globalPayrollUploader.currentFile, 
+            result.data.length, 
+            'success'
+        );
+    }
+    
+    // 데이터 미리보기 표시
+    if (result.data) {
+        displayUnifiedDataPreview(result.data);
+        performUnifiedDataAnalysis(result.data, globalPayrollUploader.currentFile?.name || 'uploaded_data');
+        saveUnifiedDataToStorage(result.data, globalPayrollUploader.currentFile?.name || 'uploaded_data');
+    }
+    
+    // 다른 컴포넌트들에게 알림
+    updateDashboardWithNewData(result);
+}
+
+// 디버그 로그 컨테이너 추가
+function addDebugLogContainer() {
+    const existingLog = document.getElementById('uploadDebugLog');
+    if (existingLog) return;
+    
+    const container = document.querySelector('.data-upload-center');
+    if (container) {
+        const debugLogDiv = document.createElement('div');
+        debugLogDiv.id = 'uploadDebugLog';
+        debugLogDiv.className = 'upload-debug-log';
+        debugLogDiv.style.display = 'none';
+        container.appendChild(debugLogDiv);
+    }
+}
+
+// PayrollFileUploader 클래스 (모듈화된 버전)
+class PayrollFileUploader {
+    constructor() {
+        this.currentFile = null;
+        this.isProcessing = false;
+        this.initializeEventListeners();
+    }
+
+    initializeEventListeners() {
+        // data-action="select-file" 버튼들에 이벤트 리스너 추가
+        const fileSelectBtns = document.querySelectorAll('[data-action="select-file"]');
+        fileSelectBtns.forEach(btn => {
+            btn.addEventListener('click', () => this.triggerFileSelect());
+        });
+        
+        console.log('PayrollFileUploader 초기화 완료');
+    }
+
+    triggerFileSelect() {
+        if (this.isProcessing) {
+            this.showMessage('현재 파일을 처리 중입니다. 잠시 후 다시 시도해주세요.', 'warning');
+            return;
+        }
+        
+        const fileInput = document.getElementById('unifiedFileInput');
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+
+    async processFile(file) {
+        if (this.isProcessing) {
+            this.showMessage('현재 파일을 처리 중입니다. 잠시 후 다시 시도해주세요.', 'warning');
+            return;
+        }
+        
+        this.isProcessing = true;
+        this.currentFile = file;
+        this.showProcessingState(true);
+        this.clearMessages();
+
+        try {
+            console.log('📁 PayrollFileUploader 파일 처리 시작:', file.name);
+            
+            // 기존 handleEnhancedFileUpload 로직 재사용
+            await this.processFileInternal(file);
+            
+        } catch (error) {
+            console.error('💥 PayrollFileUploader 예상치 못한 오류:', error);
+            const diagnostics = diagnoseUploadError(file, error);
+            this.handleError('예상치 못한 오류가 발생했습니다.', diagnostics);
+            
+        } finally {
+            this.isProcessing = false;
+            this.showProcessingState(false);
+        }
+    }
+
+    async processFileInternal(file) {
+        try {
+            // 강화된 파일 업로드 함수 사용
+            const result = await this.handleFileUploadFixed(file);
+            
+            if (result && result.length > 0) {
+                // 성공 처리
+                this.handleUploadSuccess(result, file.name);
+                return result;
+            } else {
+                throw new Error('파일 처리 결과가 비어있습니다.');
+            }
+            
+        } catch (error) {
+            // 구체적 오류 처리
+            this.handleSpecificError(error, file);
+            throw error;
+        }
+    }
+
+    // 🚀 강화된 파일 업로드 시스템
+    async handleFileUploadFixed(file) {
+        console.log('🚀 강화된 파일 업로드 시작:', file.name);
+        
+        try {
+            // 1단계: 파일 검증
+            if (!file) {
+                throw new Error('파일이 선택되지 않았습니다.');
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB
+                throw new Error('파일 크기가 10MB를 초과합니다.');
+            }
+            
+            // 2단계: 메모리 효율적 파일 읽기
+            const content = await this.readFileWithProgress(file);
+            
+            // 3단계: 안전한 JSON 파싱
+            const jsonData = await this.parseJSONSafely(content);
+            
+            // 4단계: 데이터 검증
+            this.validatePayrollData(jsonData);
+            
+            // 성공 처리
+            console.log(`✅ ${jsonData.length}개의 데이터가 성공적으로 로드되었습니다.`);
+            
+            // 전역 변수에 저장
+            window.uploadedPayrollData = jsonData;
+            
+            return jsonData;
+            
+        } catch (error) {
+            console.error('❌ 파일 업로드 오류:', error);
+            throw error;
+        }
+    }
+
+    // 진행률과 함께 파일 읽기
+    readFileWithProgress(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            // 진행률 표시
+            reader.onprogress = (e) => {
+                if (e.lengthComputable) {
+                    const progress = Math.round((e.loaded / e.total) * 100);
+                    this.updateProgressBar(progress, '파일 읽는 중...');
+                }
+            };
+            
+            reader.onload = (e) => {
+                this.updateProgressBar(100, '파일 읽기 완료');
+                resolve(e.target.result);
+            };
+            
+            reader.onerror = () => {
+                reject(new Error('파일 읽기 실패: 파일이 손상되었거나 접근할 수 없습니다.'));
+            };
+            
+            reader.onabort = () => {
+                reject(new Error('파일 읽기가 사용자에 의해 중단되었습니다.'));
+            };
+            
+            // UTF-8로 읽기 시작
+            reader.readAsText(file, 'utf-8');
+        });
+    }
+
+    // 대용량 JSON 안전 파싱
+    async parseJSONSafely(content) {
+        try {
+            this.updateProgressBar(20, 'JSON 파싱 준비 중...');
+            
+            // 빈 콘텐츠 체크
+            if (!content || content.trim() === '') {
+                throw new Error('파일이 비어있습니다.');
+            }
+            
+            // BOM 제거
+            const cleanContent = content.replace(/^\uFEFF/, '');
+            
+            this.updateProgressBar(40, 'JSON 구조 분석 중...');
+            
+            // 대용량 파일 처리
+            if (cleanContent.length > 3 * 1024 * 1024) { // 3MB 이상
+                return await this.parseJSONInChunks(cleanContent);
+            }
+            
+            this.updateProgressBar(60, 'JSON 파싱 중...');
+            
+            // 일반 파싱
+            const result = JSON.parse(cleanContent);
+            
+            this.updateProgressBar(80, 'JSON 파싱 완료');
+            
+            return result;
+            
+        } catch (error) {
+            if (error instanceof SyntaxError) {
+                // JSON 구문 오류 상세 분석
+                const errorPosition = this.extractErrorPosition(error.message);
+                const contextInfo = this.getErrorContext(content, errorPosition);
+                
+                throw new Error(`JSON 형식 오류가 발생했습니다.\n${error.message}\n${contextInfo}`);
+            }
+            
+            throw new Error(`JSON 파싱 실패: ${error.message}`);
+        }
+    }
+
+    // 대용량 JSON 청크 파싱
+    async parseJSONInChunks(content) {
+        return new Promise((resolve, reject) => {
+            this.updateProgressBar(50, '대용량 파일 처리 중...');
+            
+            // 백그라운드 처리를 위한 지연
+            setTimeout(() => {
+                try {
+                    this.updateProgressBar(70, '메모리 최적화 파싱 중...');
+                    
+                    // 메모리 사용량을 줄이기 위한 파싱
+                    const result = JSON.parse(content);
+                    
+                    this.updateProgressBar(90, '파싱 완료, 검증 중...');
+                    resolve(result);
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            }, 100); // 100ms 지연으로 UI 블로킹 방지
+        });
+    }
+
+    // 급여 데이터 검증
+    validatePayrollData(data) {
+        this.updateProgressBar(95, '데이터 유효성 검사 중...');
+        
+        if (!Array.isArray(data)) {
+            throw new Error('JSON 데이터는 배열 형태여야 합니다.');
+        }
+        
+        if (data.length === 0) {
+            throw new Error('업로드된 파일에 데이터가 없습니다.');
+        }
+        
+        // 첫 번째 레코드 구조 검증
+        const firstRecord = data[0];
+        if (!firstRecord || typeof firstRecord !== 'object') {
+            throw new Error('데이터 구조가 올바르지 않습니다.');
+        }
+        
+        // 필수 필드 확인
+        const requiredFields = ['사번', '성명'];
+        const availableFields = Object.keys(firstRecord);
+        
+        const missingFields = requiredFields.filter(field => 
+            !availableFields.includes(field) || 
+            firstRecord[field] === null || 
+            firstRecord[field] === undefined ||
+            firstRecord[field] === ''
+        );
+        
+        if (missingFields.length > 0) {
+            throw new Error(`필수 필드가 누락되었습니다: ${missingFields.join(', ')}`);
+        }
+        
+        console.log(`✅ ${data.length}개 급여 데이터 검증 완료`);
+        console.log(`📊 사용 가능한 필드: ${availableFields.slice(0, 10).join(', ')}...`);
+    }
+
+    // 구체적인 오류 처리
+    handleSpecificError(error, file) {
+        const errorMessage = error.message.toLowerCase();
+        
+        let userFriendlyMessage = '';
+        let solution = '';
+        
+        if (errorMessage.includes('json') && errorMessage.includes('syntax')) {
+            userFriendlyMessage = 'JSON 파일 형식에 오류가 있습니다.';
+            solution = '파일을 텍스트 에디터로 열어 JSON 형식을 확인해주세요.';
+            
+        } else if (errorMessage.includes('memory') || errorMessage.includes('maximum')) {
+            userFriendlyMessage = '파일이 너무 커서 메모리 부족이 발생했습니다.';
+            solution = '브라우저를 새로고침하고 다른 탭을 닫은 후 다시 시도해주세요.';
+            
+        } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+            userFriendlyMessage = '네트워크 연결에 문제가 있습니다.';
+            solution = '인터넷 연결을 확인하고 다시 시도해주세요.';
+            
+        } else if (file && file.size > 5 * 1024 * 1024) {
+            userFriendlyMessage = '파일 크기가 너무 큽니다.';
+            solution = '파일 크기를 5MB 이하로 줄이거나 데이터를 분할해주세요.';
+            
+        } else {
+            userFriendlyMessage = '파일 처리 중 알 수 없는 오류가 발생했습니다.';
+            solution = '파일 형식을 확인하고 브라우저를 새로고침한 후 다시 시도해주세요.';
+        }
+        
+        this.showErrorMessage(userFriendlyMessage, solution, error.message);
+    }
+
+    // 오류 위치 추출
+    extractErrorPosition(errorMessage) {
+        const match = errorMessage.match(/position (\d+)/i);
+        return match ? parseInt(match[1]) : null;
+    }
+
+    // 오류 컨텍스트 정보
+    getErrorContext(content, position) {
+        if (!position || !content) return '';
+        
+        const start = Math.max(0, position - 100);
+        const end = Math.min(content.length, position + 100);
+        const context = content.slice(start, end);
+        
+        return `오류 발생 위치 근처:\n"${context}"`;
+    }
+
+    // 진행률 표시 함수
+    updateProgressBar(percentage, message) {
+        // 기존 진행률 바가 있다면 업데이트
+        let progressContainer = document.getElementById('payroll-upload-progress');
+        
+        if (!progressContainer) {
+            progressContainer = this.createProgressBar();
+        }
+        
+        const progressBar = progressContainer.querySelector('.progress-fill');
+        const progressText = progressContainer.querySelector('.progress-text');
+        
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = `${message} (${percentage}%)`;
+        }
+        
+        // 완료 시 잠시 후 숨김
+        if (percentage === 100) {
+            setTimeout(() => {
+                if (progressContainer && progressContainer.parentNode) {
+                    progressContainer.style.display = 'none';
+                }
+            }, 2000);
+        } else {
+            progressContainer.style.display = 'block';
+        }
+    }
+
+    // 진행률 바 생성
+    createProgressBar() {
+        const container = document.createElement('div');
+        container.id = 'payroll-upload-progress';
+        container.className = 'payroll-progress-overlay';
+        container.innerHTML = `
+            <div class="payroll-progress-modal">
+                <div class="payroll-progress-header">
+                    <i class="fas fa-file-upload"></i>
+                    <h3>파일 처리 중...</h3>
+                </div>
+                <div class="progress-text">파일 처리 준비 중...</div>
+                <div class="payroll-progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="payroll-progress-details">
+                    <small>처리 중인 동안 페이지를 새로고침하지 마세요</small>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(container);
+        return container;
+    }
+
+    // 업로드 성공 처리
+    handleUploadSuccess(data, fileName) {
+        console.log('🎉 업로드 성공:', fileName, data.length, '개 레코드');
+        
+        // 진행률 바 완료
+        this.updateProgressBar(100, '완료!');
+        
+        // 성공 토스트 메시지
+        this.showToastMessage(
+            `${data.length}개의 급여 데이터가 성공적으로 로드되었습니다.`, 
+            'success'
+        );
+        
+        // 커스텀 이벤트 발송
+        this.dispatchPayrollEvent('payrollDataLoaded', {
+            data: data,
+            fileName: fileName,
+            recordCount: data.length
+        });
+        
+        // API로 전송
+        setTimeout(async () => {
+            try {
+                await sendToPayrollAPI(data, fileName);
+            } catch (error) {
+                console.error('API 전송 오류:', error);
+                this.showToastMessage('데이터 저장 중 오류가 발생했습니다.', 'error');
+            }
+        }, 1000);
+    }
+
+    // 오류 메시지 표시
+    showErrorMessage(userMessage, solution, technicalDetails) {
+        // 진행률 바 숨김
+        const progressContainer = document.getElementById('payroll-upload-progress');
+        if (progressContainer) {
+            progressContainer.style.display = 'none';
+        }
+        
+        // 토스트 메시지로 사용자 친화적 오류 표시
+        this.showToastMessage(userMessage, 'error');
+        
+        // 상세한 오류 정보는 콘솔에 로그
+        console.error('🔧 상세 오류 정보:', {
+            userMessage,
+            solution,
+            technicalDetails
+        });
+        
+        // 개발자 모드에서는 상세 정보도 표시
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            const fullMessage = `❌ ${userMessage}\n\n💡 해결 방법:\n${solution}\n\n🔧 기술적 세부사항:\n${technicalDetails}`;
+            
+            // 약간의 지연 후 상세 정보 표시
+            setTimeout(() => {
+                if (confirm('개발자 모드: 상세한 오류 정보를 확인하시겠습니까?')) {
+                    alert(fullMessage);
+                }
+            }, 2000);
+        }
+    }
+
+    handleSuccess(result) {
+        console.log('✅ PayrollFileUploader 파일 처리 성공:', result);
+        
+        this.showMessage(
+            `${result.recordCount || result.length}개의 급여 데이터가 성공적으로 로드되었습니다.`, 
+            'success'
+        );
+        
+        // 데이터를 전역 변수에 저장
+        window.payrollData = result.data || result;
+        
+        // 다음 단계 UI 활성화
+        this.enableNextSteps();
+        
+        // 커스텀 이벤트 발생
+        window.dispatchEvent(new CustomEvent('payrollDataLoaded', {
+            detail: result
+        }));
+    }
+
+    handleError(errorMessage, diagnostics) {
+        console.error('❌ PayrollFileUploader 파일 처리 실패:', errorMessage);
+        console.error('🔍 PayrollFileUploader 진단 정보:', diagnostics);
+        
+        this.showMessage(errorMessage, 'error');
+        
+        if (diagnostics?.solution) {
+            this.showMessage(diagnostics.solution, 'info');
+        }
+        
+        if (diagnostics?.technicalDetails) {
+            console.error('기술적 세부사항:', diagnostics.technicalDetails);
+        }
+
+        // 진단 모달 표시
+        if (diagnostics) {
+            showDiagnosticsModal(diagnostics);
+        }
+    }
+
+    showProcessingState(isProcessing) {
+        // 기존 showUploadProgress 함수 사용
+        showUploadProgress(isProcessing);
+        
+        const fileSelectBtns = document.querySelectorAll('[data-action="select-file"], .upload-drop-zone button');
+        
+        fileSelectBtns.forEach(btn => {
+            if (isProcessing) {
+                btn.disabled = true;
+                btn.classList.add('processing');
+                if (btn.textContent.includes('파일')) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리 중...';
+                }
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('processing');
+                if (btn.textContent.includes('처리')) {
+                    btn.innerHTML = '<i class="fas fa-upload"></i> 파일 선택';
+                }
+            }
+        });
+    }
+
+    showMessage(message, type = 'info') {
+        // 기존 showUploadMessage 함수 사용
+        showUploadMessage(message, type);
+        
+        // 추가로 고급 토스트 메시지도 표시
+        this.showToastMessage(message, type);
+    }
+
+    showToastMessage(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast-message toast-${type}`;
+        toast.innerHTML = `
+            <span class="toast-icon">${this.getMessageIcon(type)}</span>
+            <span class="toast-text">${message}</span>
+            <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+        `;
+        
+        // 토스트 컨테이너 찾기 또는 생성
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+        
+        container.appendChild(toast);
+        
+        // 애니메이션 효과
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        // 자동 제거 (에러는 수동으로만)
+        if (type !== 'error') {
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+    }
+
+    getMessageIcon(type) {
+        const icons = {
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+        return icons[type] || 'ℹ️';
+    }
+
+    clearMessages() {
+        // 기존 메시지 제거
+        removeUploadMessage();
+        
+        // 토스트 메시지 제거
+        const toastContainer = document.querySelector('.toast-container');
+        if (toastContainer) {
+            toastContainer.innerHTML = '';
+        }
+    }
+
+    enableNextSteps() {
+        // 다음 단계 버튼들 활성화
+        const nextButtons = document.querySelectorAll('[data-requires="payroll-data"]');
+        nextButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+        });
+        
+        // 업로드 상태 업데이트
+        const statusBadge = document.getElementById('unifiedUploadStatus');
+        if (statusBadge) {
+            statusBadge.textContent = '완료';
+            statusBadge.className = 'upload-status-badge success';
+        }
+    }
+}
+
+// 글로벌 PayrollFileUploader 인스턴스
+let globalPayrollUploader = null;
+
+// 향상된 파일 업로드 처리
+async function handleEnhancedFileUpload(files) {
+    if (!files || files.length === 0) {
+        showUploadMessage('파일이 선택되지 않았습니다.', 'error');
+        return;
+    }
+
+    const file = files[0];
+    addUploadLog(`파일 처리 시작: ${file.name} (${Math.round(file.size / 1024)}KB)`);
+    
+    // 업로드 UI 상태 변경
+    showUploadProgress(true);
+    updateUploadProgress(0, '파일 검증 중...');
+    
+    try {
+        // 파일 크기 검증 (50MB로 증가)
+        const maxSize = 50 * 1024 * 1024;
+        if (file.size > maxSize) {
+            throw new Error(`파일이 너무 큽니다. 최대 크기: ${Math.round(maxSize / 1024 / 1024)}MB`);
+        }
+        
+        updateUploadProgress(10, '파일 크기 검증 완료');
+        addUploadLog('파일 크기 검증 통과');
+        
+        // 파일 타입 검증
+        const allowedTypes = ['.json', '.txt'];
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        
+        if (!allowedTypes.includes(fileExtension)) {
+            addUploadLog(`지원하지 않는 파일 형식: ${fileExtension}`, true);
+            throw new Error(`지원하지 않는 파일 형식입니다. 허용된 형식: ${allowedTypes.join(', ')}`);
+        }
+        
+        updateUploadProgress(20, '파일 형식 검증 완료');
+        addUploadLog('파일 형식 검증 통과');
+        
+        // 파일 읽기
+        updateUploadProgress(30, '파일 읽기 중...');
+        const fileContent = await readFileWithEncoding(file);
+        
+        updateUploadProgress(50, '파일 내용 전처리 중...');
+        addUploadLog(`파일 읽기 완료: ${fileContent.length.toLocaleString()} 문자`);
+        
+        // 파일 전처리
+        const processedContent = preprocessFileContent(fileContent);
+        
+        updateUploadProgress(70, 'JSON 파싱 중...');
+        addUploadLog('SafeJSONParser로 파싱 시작');
+        
+        // 안전한 JSON 파싱
+        let data;
+        try {
+            if (processedContent.length > 5 * 1024 * 1024) { // 5MB 이상
+                addUploadLog('대용량 파일로 스트리밍 파싱 적용');
+                data = SafeJSONParser.parseStream(processedContent);
+            } else {
+                data = SafeJSONParser.parse(processedContent);
+            }
+            addUploadLog('JSON 파싱 성공');
+        } catch (parseError) {
+            const errorMsg = parseError.message || '알 수 없는 파싱 오류';
+            addUploadLog(`JSON 파싱 실패: ${errorMsg}`, true);
+            throw new Error(`JSON 파싱 실패: ${errorMsg}`);
+        }
+        
+        updateUploadProgress(90, '데이터 검증 중...');
+        
+        // 데이터 검증
+        if (!Array.isArray(data)) {
+            if (typeof data === 'object' && data !== null) {
+                addUploadLog('단일 객체를 배열로 변환');
+                data = [data];
+            } else {
+                throw new Error('데이터가 올바른 형식이 아닙니다.');
+            }
+        }
+        
+        if (data.length === 0) {
+            throw new Error('빈 데이터 배열입니다.');
+        }
+        
+        addUploadLog(`데이터 검증 완료: ${data.length.toLocaleString()}개 레코드`);
+        
+        // 기본 필드 존재 확인
+        const firstRecord = data[0];
+        const recommendedFields = ['사번', '성명', '급여영역'];
+        const existingFields = recommendedFields.filter(field => field in firstRecord);
+        
+        if (existingFields.length > 0) {
+            addUploadLog(`권장 필드 확인: ${existingFields.join(', ')} 존재`);
+        }
+        
+        updateUploadProgress(95, '서버 전송 중...');
+        
+        // 서버로 전송
+        try {
+            const apiResult = await sendToPayrollAPI(data, file.name);
+            addUploadLog('서버 업로드 성공');
+        } catch (apiError) {
+            addUploadLog(`서버 업로드 실패: ${apiError.message}`, true);
+            // 서버 실패해도 로컬 처리는 계속
+        }
+        
+        // 성공 처리
+        updateUploadProgress(100, '모든 처리 완료');
+        addUploadLog('파일 업로드 및 처리 성공!');
+        
+        // 데이터 표시
+        displayUnifiedDataPreview(data);
+        performUnifiedDataAnalysis(data, file.name);
+        saveUnifiedDataToStorage(data, file.name);
+        addUploadHistoryItem(file, data.length, 'success');
+        
+        // 성공 메시지
+        setTimeout(() => {
+            showUploadMessage(`업로드 성공! ${data.length}개의 레코드가 처리되었습니다.`, 'success');
+            hideUploadProgress();
+            
+            // payrollDataLoaded 커스텀 이벤트 발생
+            window.dispatchEvent(new CustomEvent('payrollDataLoaded', {
+                detail: {
+                    data: data,
+                    recordCount: data.length,
+                    fileName: file.name,
+                    success: true
+                }
+            }));
+        }, 500);
+        
+    } catch (error) {
+        const errorMsg = error.message || '알 수 없는 오류';
+        addUploadLog(`처리 실패: ${errorMsg}`, true);
+        updateUploadProgress(0, '처리 실패');
+        
+        // 오류 진단 실행
+        const diagnostics = diagnoseUploadError(file, error);
+        
+        setTimeout(() => {
+            showUploadMessage(`업로드 실패: ${errorMsg}`, 'error');
+            hideUploadProgress();
+            
+            // 진단 모달 표시
+            showDiagnosticsModal(diagnostics);
+        }, 1000);
+    }
+}
+
+// UTF-8으로 파일 읽기 (인코딩 자동 감지)
+function readFileWithEncoding(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            const content = e.target?.result;
+            if (!content) {
+                reject(new Error('파일 내용이 비어있습니다.'));
+                return;
+            }
+            resolve(content);
+        };
+        
+        reader.onerror = function() {
+            reject(new Error('파일 읽기 실패'));
+        };
+        
+        // UTF-8로 시도
+        try {
+            reader.readAsText(file, 'utf-8');
+        } catch (error) {
+            // 실패 시 기본 인코딩으로 시도
+            reader.readAsText(file);
+        }
+    });
+}
+
+// 업로드 진행 표시/숨김
+function showUploadProgress(show = true) {
+    const progressContainer = document.getElementById('uploadProgressContainer');
+    if (progressContainer) {
+        progressContainer.style.display = show ? 'block' : 'none';
+    }
+}
+
+function hideUploadProgress() {
+    showUploadProgress(false);
+}
+
+// 파일 업로드 오류 진단 시스템
+function diagnoseUploadError(file, error) {
+    const diagnostics = {
+        fileInfo: {
+            name: file?.name || 'Unknown',
+            size: file?.size || 0,
+            type: file?.type || 'Unknown',
+            lastModified: file?.lastModified || null
+        },
+        errorType: null,
+        solution: null,
+        technicalDetails: null,
+        recommendations: []
+    };
+
+    addUploadLog(`오류 진단 시작: ${error?.message || '알 수 없는 오류'}`, true);
+
+    // 파일 크기 검사
+    if (file?.size > 50 * 1024 * 1024) { // 50MB
+        diagnostics.errorType = 'FILE_TOO_LARGE';
+        diagnostics.solution = '파일 크기를 50MB 이하로 줄여주세요.';
+        diagnostics.recommendations.push('파일을 여러 개로 분할하여 업로드');
+        diagnostics.recommendations.push('불필요한 데이터 제거');
+    }
+    
+    // 파일 형식 검사
+    else if (file && !isValidJSONFile(file)) {
+        diagnostics.errorType = 'INVALID_FILE_TYPE';
+        diagnostics.solution = 'JSON 파일(.json) 또는 텍스트 파일(.txt)만 업로드 가능합니다.';
+        diagnostics.recommendations.push('파일 확장자를 .json으로 변경');
+        diagnostics.recommendations.push('파일 내용이 JSON 형식인지 확인');
+    }
+    
+    // JSON 파싱 오류
+    else if (error?.message?.includes('JSON') || error?.message?.includes('파싱')) {
+        diagnostics.errorType = 'JSON_PARSE_ERROR';
+        diagnostics.solution = 'JSON 파일 형식이 올바르지 않습니다.';
+        diagnostics.technicalDetails = error.message;
+        diagnostics.recommendations.push('JSON 유효성 검사 도구 사용');
+        diagnostics.recommendations.push('NaN, undefined 값 제거');
+        diagnostics.recommendations.push('마지막 쉼표 제거');
+    }
+    
+    // 배열 형태 오류
+    else if (error?.message?.includes('배열') || error?.message?.includes('Array')) {
+        diagnostics.errorType = 'ARRAY_FORMAT_ERROR';
+        diagnostics.solution = 'JSON 파일이 배열 형태가 아닙니다. 데이터를 [ ] 배열로 감싸주세요.';
+        diagnostics.technicalDetails = error.message;
+        diagnostics.recommendations.push('파일 내용을 배열 형태로 변경: [{"필드": "값"}]');
+        diagnostics.recommendations.push('단일 객체인 경우 배열로 감싸기');
+    }
+    
+    // 메모리 오류
+    else if (error?.message?.includes('memory') || error?.message?.includes('Maximum')) {
+        diagnostics.errorType = 'MEMORY_ERROR';
+        diagnostics.solution = '파일이 너무 커서 메모리 부족이 발생했습니다.';
+        diagnostics.recommendations.push('브라우저 새로고침 후 재시도');
+        diagnostics.recommendations.push('파일을 더 작은 단위로 분할');
+        diagnostics.recommendations.push('다른 브라우저 사용');
+    }
+    
+    // 네트워크 오류
+    else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+        diagnostics.errorType = 'NETWORK_ERROR';
+        diagnostics.solution = '네트워크 연결 문제가 발생했습니다.';
+        diagnostics.recommendations.push('인터넷 연결 상태 확인');
+        diagnostics.recommendations.push('서버 상태 확인');
+        diagnostics.recommendations.push('잠시 후 다시 시도');
+    }
+    
+    // 인코딩 오류
+    else if (error?.message?.includes('encoding') || error?.message?.includes('인코딩')) {
+        diagnostics.errorType = 'ENCODING_ERROR';
+        diagnostics.solution = '파일 인코딩 문제가 발생했습니다.';
+        diagnostics.recommendations.push('파일을 UTF-8로 저장');
+        diagnostics.recommendations.push('텍스트 에디터에서 다시 저장');
+    }
+    
+    // 일반 오류
+    else {
+        diagnostics.errorType = 'UNKNOWN_ERROR';
+        diagnostics.solution = '알 수 없는 오류가 발생했습니다.';
+        diagnostics.technicalDetails = error?.message || '세부 정보 없음';
+        diagnostics.recommendations.push('페이지 새로고침 후 재시도');
+        diagnostics.recommendations.push('다른 파일로 테스트');
+        diagnostics.recommendations.push('브라우저 개발자 도구 확인');
+    }
+
+    // 진단 결과 로그
+    addUploadLog(`진단 완료: ${diagnostics.errorType}`, true);
+    addUploadLog(`해결책: ${diagnostics.solution}`, true);
+    
+    if (diagnostics.recommendations.length > 0) {
+        addUploadLog(`권장사항: ${diagnostics.recommendations.join(', ')}`, false);
+    }
+
+    return diagnostics;
+}
+
+// 유효한 JSON 파일 검사
+function isValidJSONFile(file) {
+    const validTypes = ['application/json', 'text/plain', 'text/json'];
+    const validExtensions = ['.json', '.txt'];
+    
+    return validTypes.includes(file.type) || 
+           validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+}
+
+// 진단 결과 UI 표시
+function showDiagnosticsModal(diagnostics) {
+    const modal = document.createElement('div');
+    modal.className = 'diagnostics-modal';
+    modal.innerHTML = `
+        <div class="diagnostics-content">
+            <div class="diagnostics-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> 업로드 오류 진단</h3>
+                <button class="close-diagnostics" onclick="closeDiagnosticsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="diagnostics-body">
+                <div class="file-info-section">
+                    <h4><i class="fas fa-file"></i> 파일 정보</h4>
+                    <div class="file-details">
+                        <p><strong>파일명:</strong> ${diagnostics.fileInfo.name}</p>
+                        <p><strong>크기:</strong> ${Math.round(diagnostics.fileInfo.size / 1024).toLocaleString()}KB</p>
+                        <p><strong>타입:</strong> ${diagnostics.fileInfo.type}</p>
+                    </div>
+                </div>
+                
+                <div class="error-info-section">
+                    <h4><i class="fas fa-bug"></i> 오류 유형</h4>
+                    <div class="error-type">${diagnostics.errorType}</div>
+                    <div class="error-solution">${diagnostics.solution}</div>
+                </div>
+                
+                ${diagnostics.recommendations.length > 0 ? `
+                <div class="recommendations-section">
+                    <h4><i class="fas fa-lightbulb"></i> 해결 방법</h4>
+                    <ul class="recommendations-list">
+                        ${diagnostics.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+                
+                ${diagnostics.technicalDetails ? `
+                <div class="technical-details-section">
+                    <h4><i class="fas fa-code"></i> 기술적 세부사항</h4>
+                    <div class="technical-details">${diagnostics.technicalDetails}</div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="diagnostics-footer">
+                <button class="btn btn-primary" onclick="closeDiagnosticsModal()">
+                    확인
+                </button>
+                <button class="btn btn-secondary" onclick="retryUpload()">
+                    다시 시도
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// 진단 모달 닫기
+function closeDiagnosticsModal() {
+    const modal = document.querySelector('.diagnostics-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 업로드 재시도
+function retryUpload() {
+    closeDiagnosticsModal();
+    const fileInput = document.getElementById('unifiedFileInput');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+// 샘플 JSON 다운로드 함수
+function downloadSampleJSON() {
+    console.log('샘플 JSON 다운로드 시작');
+    addUploadLog('샘플 JSON 파일 생성 중');
+    
+    const sampleData = [
+        {
+            "급여일_급여유형": "2024.01.25 급여_정기급여",
+            "급여영역": "(주)샘플회사",
+            "사번": "E2024001",
+            "성명": "홍길동",
+            "입사일": 20240101,
+            "그룹입사일": 20240101,
+            "성별": "남",
+            "조직": "인사팀",
+            "직책": "팀원",
+            "직급": "대리",
+            "호봉": "3급",
+            "기본급": 3000000,
+            "직책급": 200000,
+            "식대": 100000,
+            "교통비": 150000,
+            "실지급액": 2800000,
+            "연도": 2024
+        },
+        {
+            "급여일_급여유형": "2024.01.25 급여_정기급여",
+            "급여영역": "(주)샘플회사",
+            "사번": "E2024002",
+            "성명": "김영희",
+            "입사일": 20230315,
+            "그룹입사일": 20230315,
+            "성별": "여",
+            "조직": "개발팀",
+            "직책": "팀원",
+            "직급": "과장",
+            "호봉": "5급",
+            "기본급": 3500000,
+            "직책급": 300000,
+            "식대": 100000,
+            "교통비": 150000,
+            "실지급액": 3200000,
+            "연도": 2024
+        },
+        {
+            "급여일_급여유형": "2024.01.25 급여_정기급여",
+            "급여영역": "(주)샘플회사",
+            "사번": "E2024003",
+            "성명": "박민수",
+            "입사일": 20220601,
+            "그룹입사일": 20220601,
+            "성별": "남",
+            "조직": "마케팅팀",
+            "직책": "팀장",
+            "직급": "차장",
+            "호봉": "7급",
+            "기본급": 4000000,
+            "직책급": 500000,
+            "식대": 100000,
+            "교통비": 150000,
+            "실지급액": 3800000,
+            "연도": 2024
+        }
+    ];
+    
+    try {
+        const blob = new Blob([JSON.stringify(sampleData, null, 2)], 
+            { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'paypulse_sample_payroll.json';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        addUploadLog('샘플 JSON 파일 다운로드 완료');
+        
+        // 성공 토스트 메시지
+        if (globalPayrollUploader) {
+            globalPayrollUploader.showToastMessage(
+                '샘플 JSON 파일이 다운로드되었습니다. 이 파일을 참고하여 업로드할 파일을 준비하세요.', 
+                'success'
+            );
+        } else {
+            showUploadMessage('샘플 JSON 파일 다운로드 완료', 'success');
+        }
+        
+    } catch (error) {
+        console.error('샘플 JSON 다운로드 오류:', error);
+        addUploadLog('샘플 JSON 다운로드 실패', true);
+        
+        if (globalPayrollUploader) {
+            globalPayrollUploader.showToastMessage(
+                '샘플 파일 다운로드 중 오류가 발생했습니다.', 
+                'error'
+            );
+        } else {
+            showUploadMessage('샘플 JSON 다운로드 실패', 'error');
+        }
+    }
+}
+
 // 로컬 스토리지 키
 const STORAGE_KEY = 'paypulse_persistent_data';
 
@@ -69,21 +1449,194 @@ function loadPageContent(pageName) {
         pageContent.innerHTML = content;
         console.log('페이지 콘텐츠 로드됨:', pageName);
         
-        // AI 채팅 페이지인 경우 데이터 연동 상태 확인
-        if (pageName === 'ai-chat') {
+        // 페이지별 초기화
             setTimeout(() => {
-                checkDataConnection();
+            initializePage(pageName);
             }, 100);
-        }
     }
 }
 
 // 페이지 콘텐츠 반환
 function getPageContent(pageName) {
     const pages = {
-        'data-center': `
+        'employee': `
             <div class="page-header">
                 <h2><i class="fas fa-database"></i> 통합 데이터 업로드</h2>
+                <p>Excel, CSV, JSON 파일을 업로드하여 데이터를 관리하세요</p>
+            </div>
+                    
+                    <div class="step-indicator">
+                        <div class="step-item" id="uploadStep">
+                            <i class="fas fa-file-upload"></i>
+                            <span>업로드</span>
+                        </div>
+                        <div class="step-item" id="dashboardStep">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>분석</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 업로드 단계 -->
+            <div class="payroll-step" id="uploadSection">
+                <div class="step-content">
+                    <div class="step-intro">
+                        <h2>급여 데이터 파일 업로드</h2>
+                        <p>JSON 형태의 급여 데이터를 업로드하면 자동으로 분석하여 시각적인 대시보드를 제공합니다.</p>
+                    </div>
+
+                    <!-- 통합 업로드 섹션 재사용 -->
+                    <div class="unified-upload-section">
+                        <div class="upload-drop-zone" id="payrollDropZone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                            <p>급여 파일을 여기로 드래그하거나 클릭하여 선택하세요</p>
+                            <span class="supported-formats">지원 형식: JSON, CSV, Excel</span>
+                        </div>
+                        <div class="upload-buttons">
+                            <button class="btn upload-btn" data-action="select-payroll-file">
+                                <i class="fas fa-upload"></i> 📁 파일 선택
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadSamplePayrollData()">
+                                <i class="fas fa-flask"></i> 샘플 데이터
+                            </button>
+                            <button class="btn btn-outline sample-btn" onclick="downloadSampleJSON()">
+                                <i class="fas fa-download"></i> 📄 샘플 JSON 다운로드
+                            </button>
+                        </div>
+                        
+                        <!-- 파일 입력 (숨김) -->
+                        <input type="file" id="payrollFileInput" accept=".json,.csv,.xlsx,.xls" style="display: none;">
+                    </div>
+
+                    <!-- 업로드 진행률 (동적으로 생성됨) -->
+                    
+                    <!-- 오류 메시지 -->
+                    <div class="upload-error" id="uploadError" style="display: none;">
+                        <h3>업로드 오류</h3>
+                        <p id="errorMessage"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 대시보드 단계 -->
+            <div class="payroll-step" id="dashboardSection" style="display: none;">
+                <div class="step-content">
+                    <div class="step-intro">
+                        <h2>급여 데이터 분석 대시보드</h2>
+                        <p id="dataDescription">0개의 급여 데이터를 분석한 결과입니다.</p>
+                    </div>
+
+                    <!-- 대시보드 컨테이너 (기존 대시보드 재사용) -->
+                    <div class="payroll-dashboard-container">
+                        <!-- 필터 및 컨트롤 -->
+                        <div class="dashboard-controls">
+                            <div class="filter-section">
+                                <div class="filter-header">
+                                    <i class="fas fa-filter"></i>
+                                    <span>시각적 분석 필터</span>
+                                </div>
+                                <select id="systemYearFilter" class="filter-select">
+                                    <option value="">전체 연도</option>
+                                </select>
+                                <select id="systemCompanyFilter" class="filter-select">
+                                    <option value="">전체 회사</option>
+                                </select>
+                            </div>
+                            <button id="systemDownloadCSV" class="dashboard-btn">
+                                <i class="fas fa-download"></i>
+                                CSV 다운로드
+                            </button>
+                        </div>
+
+                        <!-- 주요 통계 카드 -->
+                        <div class="stats-grid">
+                            <div class="stat-card stat-employees">
+                                <div class="stat-content">
+                                    <div class="stat-text">
+                                        <p class="stat-label">총 직원수</p>
+                                        <p class="stat-value" id="systemTotalEmployees">0</p>
+                                    </div>
+                                    <i class="fas fa-users stat-icon"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-payroll">
+                                <div class="stat-content">
+                                    <div class="stat-text">
+                                        <p class="stat-label">총 급여액</p>
+                                        <p class="stat-value" id="systemTotalPayroll">0억</p>
+                                    </div>
+                                    <i class="fas fa-chart-line stat-icon"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-average">
+                                <div class="stat-content">
+                                    <div class="stat-text">
+                                        <p class="stat-label">평균 급여</p>
+                                        <p class="stat-value" id="systemAvgPayroll">0만</p>
+                                    </div>
+                                    <i class="fas fa-calendar stat-icon"></i>
+                                </div>
+                            </div>
+                            <div class="stat-card stat-companies">
+                                <div class="stat-content">
+                                    <div class="stat-text">
+                                        <p class="stat-label">회사수</p>
+                                        <p class="stat-value" id="systemTotalCompanies">0</p>
+                                    </div>
+                                    <i class="fas fa-building stat-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 차트 영역 -->
+                        <div class="charts-grid">
+                            <div class="chart-container">
+                                <h3 class="chart-title">📊 부서별 현황 (Top 10)</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="systemDepartmentChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <h3 class="chart-title">💰 급여 구간별 분포</h3>
+                                <div class="chart-wrapper">
+                                    <canvas id="systemSalaryChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 상세 테이블 -->
+                        <div class="detailed-table-container">
+                            <div class="table-header">
+                                <h3>📋 상세 데이터</h3>
+                                <p id="systemTableDescription">0명의 급여 정보</p>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="payroll-table" id="systemPayrollTable">
+                                    <thead>
+                                        <tr>
+                                            <th>사번</th>
+                                            <th>성명</th>
+                                            <th>회사</th>
+                                            <th>부서</th>
+                                            <th>직급</th>
+                                            <th>실지급액</th>
+                                            <th>연도</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="systemPayrollTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        'data-center': `
+            <div class="page-header">
+                <h2><i class="fas fa-chart-line"></i> 종합 인건비</h2>
                 <p>모든 데이터 업로드를 한 곳에서 관리하세요</p>
             </div>
             
@@ -99,8 +1652,8 @@ function getPageContent(pageName) {
                     <div class="upload-actions">
                         <input type="file" id="salaryFileInput" accept=".xlsx,.csv,.json" style="display: none;">
                         <button class="btn" onclick="document.getElementById('salaryFileInput').click()">
-                            <i class="fas fa-upload"></i> 파일 선택
-                        </button>
+                        <i class="fas fa-upload"></i> 파일 선택
+                    </button>
                         <button class="btn btn-secondary" onclick="loadSampleSalaryData()">
                             <i class="fas fa-flask"></i> 샘플 데이터
                         </button>
@@ -112,7 +1665,7 @@ function getPageContent(pageName) {
                         <span class="progress-text" id="salaryProgressText">업로드 중...</span>
                     </div>
                 </div>
-
+                
                 <!-- 전문분석 데이터 업로드 -->
                 <div class="upload-section-card">
                     <div class="upload-card-header">
@@ -182,25 +1735,25 @@ function getPageContent(pageName) {
                     </div>
                     <div class="summary-actions">
                         <button class="btn btn-primary" onclick="switchPage('ai-chat')">
-                            <i class="fas fa-robot"></i> AI 분석 시작
-                        </button>
+                                <i class="fas fa-robot"></i> AI 분석 시작
+                            </button>
                         <button class="btn btn-secondary" onclick="switchPage('hc-roi')">
                             <i class="fas fa-chart-pie"></i> 전문가 분석&예측 보기
-                        </button>
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </div>
+                    </div>
         `,
         'upload': `
             <div class="page-header">
-                <h2><i class="fas fa-arrow-right"></i> 통합 데이터 업로드로 이동</h2>
-                <p>업로드 기능이 통합 데이터 업로드 센터로 이동되었습니다</p>
+                <h2><i class="fas fa-arrow-right"></i> 종합 인건비로 이동</h2>
+                <p>업로드 기능이 종합 인건비 센터로 이동되었습니다</p>
             </div>
             
             <div class="redirect-section">
                 <div class="redirect-box">
-                    <i class="fas fa-database"></i>
-                    <h3>통합 데이터 업로드 센터</h3>
+                    <i class="fas fa-chart-line"></i>
+                    <h3>종합 인건비 센터</h3>
                     <p>모든 업로드 기능을 한 곳에서 관리하세요</p>
                     <button class="btn btn-primary" onclick="switchPage('data-center')">
                         <i class="fas fa-arrow-right"></i> 통합 업로드 센터로 이동
@@ -239,6 +1792,113 @@ function getPageContent(pageName) {
         </div>
         <div class="filter-result">
             <span class="filter-count" id="filterCount">전체 데이터 표시 중</span>
+        </div>
+    </div>
+    
+    <!-- 급여 대시보드 영역 -->
+    <div class="payroll-dashboard" id="payrollDashboard" style="display: none;">
+        <!-- 필터 및 컨트롤 -->
+        <div class="dashboard-controls">
+            <div class="filter-section">
+                <div class="filter-header">
+                    <i class="fas fa-filter"></i>
+                    <span>시각적 분석 필터</span>
+                </div>
+                <select id="yearFilter" class="filter-select">
+                    <option value="">전체 연도</option>
+                </select>
+                <select id="companyFilter" class="filter-select">
+                    <option value="">전체 회사</option>
+                </select>
+            </div>
+            <button id="downloadCSV" class="dashboard-btn">
+                <i class="fas fa-download"></i>
+                CSV 다운로드
+            </button>
+        </div>
+
+        <!-- 주요 통계 카드 -->
+        <div class="stats-grid">
+            <div class="stat-card stat-employees">
+                <div class="stat-content">
+                    <div class="stat-text">
+                        <p class="stat-label">총 직원수</p>
+                        <p class="stat-value" id="totalEmployees">0</p>
+                    </div>
+                    <i class="fas fa-users stat-icon"></i>
+                </div>
+            </div>
+            <div class="stat-card stat-payroll">
+                <div class="stat-content">
+                    <div class="stat-text">
+                        <p class="stat-label">총 급여액</p>
+                        <p class="stat-value" id="totalPayroll">0억</p>
+                    </div>
+                    <i class="fas fa-chart-line stat-icon"></i>
+                </div>
+            </div>
+            <div class="stat-card stat-average">
+                <div class="stat-content">
+                    <div class="stat-text">
+                        <p class="stat-label">평균 급여</p>
+                        <p class="stat-value" id="avgPayroll">0만</p>
+                    </div>
+                    <i class="fas fa-calendar stat-icon"></i>
+                </div>
+            </div>
+            <div class="stat-card stat-companies">
+                <div class="stat-content">
+                    <div class="stat-text">
+                        <p class="stat-label">회사수</p>
+                        <p class="stat-value" id="totalCompanies">0</p>
+                    </div>
+                    <i class="fas fa-building stat-icon"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 차트 영역 -->
+        <div class="charts-grid">
+            <!-- 부서별 현황 차트 -->
+            <div class="chart-container">
+                <h3 class="chart-title">📊 부서별 현황 (Top 10)</h3>
+                <div class="chart-wrapper">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- 급여 구간별 분포 차트 -->
+            <div class="chart-container">
+                <h3 class="chart-title">💰 급여 구간별 분포</h3>
+                <div class="chart-wrapper">
+                    <canvas id="salaryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 상세 테이블 -->
+        <div class="detailed-table-container">
+            <div class="table-header">
+                <h3>📋 상세 데이터</h3>
+                <p id="tableDescription">0명의 급여 정보</p>
+            </div>
+            <div class="table-wrapper">
+                <table class="payroll-table" id="payrollTable">
+                    <thead>
+                        <tr>
+                            <th>사번</th>
+                            <th>성명</th>
+                            <th>회사</th>
+                            <th>부서</th>
+                            <th>직급</th>
+                            <th>실지급액</th>
+                            <th>연도</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payrollTableBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
     
@@ -438,19 +2098,19 @@ function getPageContent(pageName) {
                 <div class="expert-header">
                     <h2><i class="fas fa-chart-line"></i> 전문가 분석&예측</h2>
                     <p>AI 기반 인력 비용 최적화 및 ROI 분석</p>
-                </div>
-                
+            </div>
+            
                 <div class="expert-tab-navigation">
                     <button class="expert-tab-btn active" onclick="switchExpertTab('dashboard')">
                         <i class="fas fa-tachometer-alt"></i> 임원 대시보드
-                    </button>
+                        </button>
                     <button class="expert-tab-btn" onclick="switchExpertTab('ai-analysis')">
                         <i class="fas fa-brain"></i> AI 분석
-                    </button>
+                        </button>
                     <button class="expert-tab-btn" onclick="switchExpertTab('hc-roi')">
                         <i class="fas fa-calculator"></i> HC ROI
                     </button>
-                </div>
+                    </div>
                 
                 <!-- 임원 대시보드 탭 -->
                 <div id="expert-dashboard-tab" class="expert-tab-content active">
@@ -463,9 +2123,9 @@ function getPageContent(pageName) {
                                 <h3>총 인력</h3>
                                 <p class="metric-value">247명</p>
                                 <p class="metric-change positive">+12% vs 전년</p>
-                            </div>
-                        </div>
-                        
+                </div>
+            </div>
+            
                         <div class="expert-metric-card">
                             <div class="metric-icon">
                                 <i class="fas fa-dollar-sign"></i>
@@ -1067,6 +2727,456 @@ function getPageContent(pageName) {
                     </ul>
                 </div>
             </div>
+        `,
+        'upload-history': `
+            <div class="page-header">
+                <h2><i class="fas fa-history"></i> 업로드 화면</h2>
+                <p>업로드한 파일 내역을 확인하고 관리하세요</p>
+            </div>
+            
+            <div class="upload-history-container">
+                <!-- 업로드 통계 -->
+                <div class="upload-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>총 업로드 파일</h3>
+                            <p class="stat-number" id="totalUploadedFiles">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>성공</h3>
+                            <p class="stat-number" id="successfulUploads">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>실패</h3>
+                            <p class="stat-number" id="failedUploads">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>총 레코드</h3>
+                            <p class="stat-number" id="totalRecordsUploaded">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 파일 목록 -->
+                <div class="upload-files-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-list"></i> 업로드 파일 목록</h3>
+                        <div class="section-controls">
+                            <button class="btn btn-secondary" onclick="refreshUploadHistory()">
+                                <i class="fas fa-sync"></i> 새로고침
+                            </button>
+                            <button class="btn btn-outline" onclick="clearUploadHistory()">
+                                <i class="fas fa-trash"></i> 내역 삭제
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="upload-files-table" id="uploadFilesTable">
+                        <div class="table-header">
+                            <div class="table-col">파일명</div>
+                            <div class="table-col">타입</div>
+                            <div class="table-col">크기</div>
+                            <div class="table-col">레코드 수</div>
+                            <div class="table-col">업로드 일시</div>
+                            <div class="table-col">상태</div>
+                            <div class="table-col">액션</div>
+                        </div>
+                        <div class="table-body" id="uploadFilesTableBody">
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>업로드된 파일이 없습니다</p>
+                                <button class="btn" onclick="switchPage('data-center')">
+                                    <i class="fas fa-upload"></i> 파일 업로드하기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 파일 상세 정보 모달 -->
+                <div class="file-detail-modal" id="fileDetailModal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-file-alt"></i> 파일 상세 정보</h3>
+                            <button class="modal-close" onclick="closeFileDetailModal()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body" id="fileDetailContent">
+                            <!-- 파일 상세 정보가 여기에 표시됩니다 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        'direct-labor': `
+            <div class="page-header">
+                <h2><i class="fas fa-hard-hat"></i> 직접 인건비</h2>
+                <p>제품 생산에 직접적으로 기여하는 인력의 비용을 관리합니다</p>
+            </div>
+            
+            <div class="labor-cost-container">
+                <div class="cost-overview">
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-industry"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>생산직 인건비</h3>
+                            <p class="cost-amount">₩ 2,450,000,000</p>
+                            <p class="cost-period">2024년 1월</p>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-tools"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>기술직 인건비</h3>
+                            <p class="cost-amount">₩ 1,850,000,000</p>
+                            <p class="cost-period">2024년 1월</p>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>직접 인건비 비율</h3>
+                            <p class="cost-amount">68.5%</p>
+                            <p class="cost-period">총 인건비 대비</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cost-analysis">
+                    <h3><i class="fas fa-analytics"></i> 직접 인건비 분석</h3>
+                    <div class="analysis-grid">
+                        <div class="analysis-item">
+                            <h4>인원 현황</h4>
+                            <ul>
+                                <li>생산직: 156명</li>
+                                <li>기술직: 89명</li>
+                                <li>총 직접 인력: 245명</li>
+                            </ul>
+                        </div>
+                        <div class="analysis-item">
+                            <h4>평균 급여</h4>
+                            <ul>
+                                <li>생산직: ₩3,200,000</li>
+                                <li>기술직: ₩4,150,000</li>
+                                <li>직접 인력 평균: ₩3,550,000</li>
+                            </ul>
+                        </div>
+                        <div class="analysis-item">
+                            <h4>추세 분석</h4>
+                            <ul>
+                                <li>전월 대비: +2.3%</li>
+                                <li>전년 동월 대비: +8.7%</li>
+                                <li>예상 증가율: +3.2%</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        'indirect-labor': `
+            <div class="page-header">
+                <h2><i class="fas fa-briefcase"></i> 간접 인건비</h2>
+                <p>제품 생산을 지원하는 간접 인력의 비용을 관리합니다</p>
+            </div>
+            
+            <div class="labor-cost-container">
+                <div class="cost-overview">
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>관리직 인건비</h3>
+                            <p class="cost-amount">₩ 1,200,000,000</p>
+                            <p class="cost-period">2024년 1월</p>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>사무직 인건비</h3>
+                            <p class="cost-amount">₩ 850,000,000</p>
+                            <p class="cost-period">2024년 1월</p>
+                        </div>
+                    </div>
+                    
+                    <div class="cost-card">
+                        <div class="cost-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <div class="cost-content">
+                            <h3>간접 인건비 비율</h3>
+                            <p class="cost-amount">31.5%</p>
+                            <p class="cost-period">총 인건비 대비</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cost-analysis">
+                    <h3><i class="fas fa-analytics"></i> 간접 인건비 분석</h3>
+                    <div class="analysis-grid">
+                        <div class="analysis-item">
+                            <h4>인원 현황</h4>
+                            <ul>
+                                <li>관리직: 45명</li>
+                                <li>사무직: 67명</li>
+                                <li>총 간접 인력: 112명</li>
+                            </ul>
+                        </div>
+                        <div class="analysis-item">
+                            <h4>평균 급여</h4>
+                            <ul>
+                                <li>관리직: ₩5,300,000</li>
+                                <li>사무직: ₩3,800,000</li>
+                                <li>간접 인력 평균: ₩4,250,000</li>
+                            </ul>
+                        </div>
+                        <div class="analysis-item">
+                            <h4>추세 분석</h4>
+                            <ul>
+                                <li>전월 대비: +1.8%</li>
+                                <li>전년 동월 대비: +6.2%</li>
+                                <li>예상 증가율: +2.5%</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        'employee': `
+            <div class="page-header">
+                <h2><i class="fas fa-database"></i> 통합 데이터 업로드</h2>
+                <p>Excel, CSV, JSON 파일을 업로드하여 데이터를 관리하세요</p>
+            </div>
+            
+            <div class="data-upload-center">
+                <!-- 통합 파일 업로드 -->
+                <div class="upload-section-card">
+                    <div class="upload-card-header">
+                        <i class="fas fa-file-upload"></i>
+                        <h3>파일 업로드</h3>
+                        <span class="upload-status-badge" id="unifiedUploadStatus">대기중</span>
+                    </div>
+                    <p>Excel(.xlsx, .xls), CSV(.csv), JSON(.json) 파일을 업로드하여 데이터를 분석하고 관리합니다.</p>
+                    <div class="upload-actions">
+                        <input type="file" id="unifiedFileInput" accept=".xlsx,.xls,.csv,.json" style="display: none;">
+                        <div class="upload-drop-zone" id="unifiedDropZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>파일을 여기로 드래그하거나 클릭하여 선택하세요</p>
+                            <span class="supported-formats">지원 형식: CSV, JSON, Excel</span>
+                        </div>
+                        <div class="upload-buttons">
+                            <button class="btn upload-btn" data-action="select-file">
+                                <i class="fas fa-upload"></i> 📁 파일 선택
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadSampleUnifiedData()">
+                                <i class="fas fa-flask"></i> 샘플 데이터
+                            </button>
+                            <button class="btn btn-outline sample-btn" onclick="downloadSampleJSON()">
+                                <i class="fas fa-download"></i> 📄 샘플 JSON 다운로드
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 향상된 업로드 진행률 표시 -->
+                    <div class="upload-progress-container" id="uploadProgressContainer" style="display: none;">
+                        <div class="upload-status">
+                            <div class="status-icon">
+                                <i class="fas fa-sync fa-spin"></i>
+                            </div>
+                            <span class="status-text">파일 처리 중...</span>
+                        </div>
+                        <div class="progress-wrapper">
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar" id="uploadProgressBar"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="progress-percentage" id="uploadProgressText">0%</span>
+                                <span class="progress-step" id="uploadStepText">준비 중...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 파일 형식 가이드 -->
+                <div class="upload-section-card">
+                    <div class="upload-card-header">
+                        <i class="fas fa-info-circle"></i>
+                        <h3>지원 파일 형식</h3>
+                    </div>
+                    <div class="file-format-guide">
+                        <div class="format-item">
+                            <div class="format-icon excel">
+                                <i class="fas fa-file-excel"></i>
+                            </div>
+                            <div class="format-info">
+                                <h4>Excel 파일</h4>
+                                <p>.xlsx, .xls 형식 지원</p>
+                                <small>최대 10MB, 첫 번째 시트의 데이터를 읽습니다</small>
+                            </div>
+                        </div>
+                        <div class="format-item">
+                            <div class="format-icon csv">
+                                <i class="fas fa-file-csv"></i>
+                            </div>
+                            <div class="format-info">
+                                <h4>CSV 파일</h4>
+                                <p>.csv 형식 지원</p>
+                                <small>UTF-8 인코딩, 쉼표로 구분된 데이터</small>
+                            </div>
+                        </div>
+                        <div class="format-item">
+                            <div class="format-icon json">
+                                <i class="fas fa-file-code"></i>
+                            </div>
+                            <div class="format-info">
+                                <h4>JSON 파일</h4>
+                                <p>.json 형식 지원</p>
+                                <small>배열 형태의 객체 데이터</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 업로드된 데이터 미리보기 -->
+                <div class="upload-section-card" id="dataPreviewSection" style="display: none;">
+                    <div class="upload-card-header">
+                        <i class="fas fa-table"></i>
+                        <h3>데이터 미리보기</h3>
+                    </div>
+                    <div class="data-preview-content">
+                        <div class="preview-info">
+                            <span id="previewFileName">파일명</span>
+                            <span id="previewRecordCount">0개 레코드</span>
+                        </div>
+                        <div class="preview-table-wrapper">
+                            <table id="unifiedDataTable">
+                                <thead id="unifiedTableHead"></thead>
+                                <tbody id="unifiedTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 업로드 성공 시 데이터 확인 -->
+                <div class="upload-section-card" id="uploadSuccessSection" style="display: none;">
+                    <div class="upload-card-header">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <h3>업로드 성공! 📊</h3>
+                        <div class="success-actions">
+                            <button class="btn btn-small" onclick="clearUploadedData()">
+                                <i class="fas fa-trash"></i> 데이터 지우기
+                            </button>
+                            <button class="btn btn-small btn-secondary" onclick="downloadUploadedData()">
+                                <i class="fas fa-download"></i> 다운로드
+                            </button>
+                        </div>
+                    </div>
+                    <div class="upload-success-content">
+                        <!-- 기본 정보 -->
+                        <div class="success-summary">
+                            <div class="summary-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">파일명</span>
+                                    <span class="stat-value" id="successFileName">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">레코드 수</span>
+                                    <span class="stat-value" id="successRecordCount">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">업로드 시간</span>
+                                    <span class="stat-value" id="successUploadTime">-</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">필드 수</span>
+                                    <span class="stat-value" id="successFieldCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 데이터 미리보기 -->
+                        <div class="data-preview-section">
+                            <h4>📋 데이터 미리보기</h4>
+                            <div class="preview-controls">
+                                <button class="btn btn-small" onclick="showAllFields()" id="showAllFieldsBtn">
+                                    <i class="fas fa-expand"></i> 모든 필드 보기
+                                </button>
+                                <button class="btn btn-small" onclick="showLessFields()" id="showLessFieldsBtn" style="display: none;">
+                                    <i class="fas fa-compress"></i> 간단히 보기
+                                </button>
+                            </div>
+                            <div class="preview-table-container">
+                                <table class="preview-table" id="successPreviewTable">
+                                    <thead id="successTableHead"></thead>
+                                    <tbody id="successTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- 필드 정보 -->
+                        <div class="fields-info-section">
+                            <h4>🏷️ 필드 정보</h4>
+                            <div class="fields-list" id="successFieldsList">
+                                <!-- 필드 목록이 여기에 생성됩니다 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 데이터 분석 결과 -->
+                <div class="upload-section-card" id="analysisSection" style="display: none;">
+                    <div class="upload-card-header">
+                        <i class="fas fa-chart-bar"></i>
+                        <h3>데이터 분석</h3>
+                    </div>
+                    <div class="analysis-content" id="unifiedAnalysisContent">
+                        <div class="analysis-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">총 레코드</span>
+                                <span class="summary-value" id="totalRecords">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">컬럼 수</span>
+                                <span class="summary-value" id="totalColumns">0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">데이터 타입</span>
+                                <span class="summary-value" id="dataType">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `
     };
     
@@ -1095,6 +3205,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(initializeCollapsiblePanels, 200);
             } else if (pageName === 'data-history') {
                 setTimeout(displayUploadHistory, 100);
+            } else if (pageName === 'upload-history') {
+                setTimeout(loadUploadHistory, 100);
             }
         });
     });
@@ -1112,6 +3224,47 @@ document.addEventListener('DOMContentLoaded', function() {
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
+        });
+    }
+    
+    // 통합 데이터 업로드 센터 파일 업로드
+    const unifiedFileInput = document.getElementById('unifiedFileInput');
+    if (unifiedFileInput) {
+        unifiedFileInput.addEventListener('change', function(event) {
+            handleUnifiedFileUpload(event.target.files);
+        });
+    }
+    
+    // 드래그 앤 드롭 이벤트 설정
+    const unifiedDropZone = document.getElementById('unifiedDropZone');
+    if (unifiedDropZone) {
+        // 드롭 존 클릭 시 파일 선택
+        unifiedDropZone.addEventListener('click', function() {
+            document.getElementById('unifiedFileInput').click();
+        });
+        
+        // 드래그 이벤트 처리
+        unifiedDropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.add('drag-over');
+        });
+        
+        unifiedDropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.remove('drag-over');
+        });
+        
+        unifiedDropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            unifiedDropZone.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleUnifiedFileUpload(files);
+            }
         });
     }
 });
@@ -4119,6 +6272,1467 @@ function loadSampleSalaryData() {
 
 function loadSampleEmployeeData() {
     handleEmployeeFileUpload([{name: 'sample_employee.xlsx'}]);
+}
+
+// 통합 파일 업로드 처리
+async function handleUnifiedFileUpload(files) {
+    console.log('파일 업로드 시작:', files.length, '개 파일');
+    
+    if (files.length === 0) {
+        console.warn('업로드할 파일이 없습니다');
+        return;
+    }
+    
+    const file = files[0];
+    console.log('업로드 파일 정보:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: new Date(file.lastModified)
+    });
+    
+    const statusElement = document.getElementById('unifiedUploadStatus');
+    const progressElement = document.getElementById('unifiedUploadProgress');
+    const progressFill = document.getElementById('unifiedProgressFill');
+    const progressText = document.getElementById('unifiedProgressText');
+    
+    // 파일 확장자 및 MIME 타입 검증 강화
+    const extension = file.name.split('.').pop().toLowerCase();
+    const supportedExtensions = ['csv', 'json', 'xlsx', 'xls'];
+    const supportedMimeTypes = [
+        'application/json',
+        'text/json', 
+        'text/plain',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel'
+    ];
+    
+    if (!supportedExtensions.includes(extension)) {
+        const message = `지원하지 않는 파일 형식입니다: ${extension}\n지원 형식: ${supportedExtensions.join(', ')}`;
+        console.error(message);
+        alert(message);
+        return;
+    }
+    
+    // JSON 파일인 경우 MIME 타입도 검증
+    if (extension === 'json' && file.type && !supportedMimeTypes.includes(file.type)) {
+        console.warn('MIME 타입 경고:', file.type, '하지만 확장자가 .json이므로 계속 진행');
+    }
+    
+    // 파일 크기 검증 (10MB 제한)
+    if (file.size > 10 * 1024 * 1024) {
+        const message = '파일 크기가 너무 큽니다. 10MB 이하의 파일을 업로드해 주세요.';
+        console.error(message, 'File size:', file.size);
+        alert(message);
+        return;
+    }
+    
+    // 빈 파일 검증
+    if (file.size === 0) {
+        const message = '빈 파일입니다. 데이터가 있는 파일을 업로드해 주세요.';
+        console.error(message);
+        alert(message);
+        return;
+    }
+    
+    // 상태 초기화
+    console.log('업로드 상태 초기화');
+    if (statusElement) {
+        statusElement.textContent = '처리중';
+        statusElement.className = 'upload-status-badge processing';
+    }
+    
+    if (progressElement) {
+        progressElement.style.display = 'block';
+    }
+    
+    // 진행률 업데이트 함수
+    const updateProgress = (percent, message) => {
+        console.log(`진행률: ${percent}% - ${message}`);
+        if (progressFill) progressFill.style.width = percent + '%';
+        if (progressText) progressText.textContent = message;
+    };
+    
+    try {
+        updateProgress(10, '파일 읽기 시작...');
+        
+        // 짧은 지연으로 UI 업데이트 허용
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        updateProgress(30, '파일 분석 중...');
+        
+        // 실제 파일 처리
+        console.log('파일 처리 시작');
+        await processUnifiedFile(file);
+        
+        updateProgress(100, '업로드 완료!');
+        
+        // 성공 상태 업데이트
+        console.log('업로드 성공 완료');
+        if (statusElement) {
+            statusElement.textContent = '완료';
+            statusElement.className = 'upload-status-badge success';
+        }
+        
+        // React 스타일 성공 메시지 표시
+        showUploadMessage('success', `${file.name} 파일이 성공적으로 업로드되었습니다.`);
+        
+    } catch (error) {
+        console.error('파일 업로드 오류:', error);
+        console.error('오류 스택:', error.stack);
+        
+        updateProgress(0, '업로드 실패');
+        
+        if (statusElement) {
+            statusElement.textContent = '실패';
+            statusElement.className = 'upload-status-badge failed';
+        }
+        
+        // React 스타일 오류 메시지 표시
+        showUploadMessage('error', error.message, {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: extension
+        });
+        
+        // 진행률 바 숨기기
+    setTimeout(() => {
+            if (progressElement) {
+                progressElement.style.display = 'none';
+            }
+        }, 3000);
+    }
+}
+
+// 통합 파일 처리
+async function processUnifiedFile(file) {
+    console.log('파일 처리 함수 시작:', file.name);
+    
+    try {
+        const extension = file.name.split('.').pop().toLowerCase();
+        console.log('파일 확장자:', extension);
+        
+        let data;
+        
+        switch (extension) {
+            case 'csv':
+                console.log('CSV 파싱 시작');
+                data = await parseUnifiedCSV(file);
+                break;
+            case 'json':
+                console.log('JSON 파싱 시작');
+                data = await parseUnifiedJSON(file);
+                
+                // JSON 파일의 경우 서버 API로도 전송
+                try {
+                    console.log('서버 API 전송 시작');
+                    const apiResult = await sendToPayrollAPI(data, file.name);
+                    console.log('API 업로드 성공:', apiResult);
+                    
+                    // API 성공 메시지는 handleUnifiedFileUpload에서 처리
+                } catch (apiError) {
+                    console.warn('API 업로드 실패, 로컬에서만 처리:', apiError);
+                    // 경고 메시지는 표시하지 않고 로컬 처리 계속
+                }
+                break;
+            case 'xlsx':
+            case 'xls':
+                console.log('Excel 파싱 시작');
+                data = await parseUnifiedExcel(file);
+                break;
+            default:
+                throw new Error(`지원하지 않는 파일 형식입니다. (${extension})\n지원 형식: CSV, JSON, Excel`);
+        }
+        
+        console.log('파싱 완료, 데이터 검증 시작:', data?.length, '개 레코드');
+        
+        // 데이터 검증
+        if (!data || data.length === 0) {
+            throw new Error('파일에서 데이터를 읽을 수 없습니다. 파일 형식을 확인해주세요.');
+        }
+        
+        console.log('데이터 검증 완료, 첫 번째 레코드:', data[0]);
+        
+        // 업로드 내역에 추가 (성공)
+        console.log('업로드 내역 추가');
+        addUploadHistoryItem(file.name, getFileTypeFromExtension(file.name), file.size, data.length, 'success', null, data.slice(0, 3));
+        
+        // 데이터 미리보기 표시
+        console.log('미리보기 표시 시작');
+        displayUnifiedDataPreview(file.name, data);
+        
+        // 데이터 분석 수행
+        console.log('데이터 분석 시작');
+        performUnifiedDataAnalysis(data);
+        
+        // 로컬 스토리지에 데이터 저장
+        console.log('로컬 스토리지 저장 시작');
+        saveUnifiedDataToStorage(file.name, data);
+        
+        console.log('파일 처리 완전 완료');
+        
+    } catch (error) {
+        console.error('파일 처리 오류 상세:', {
+            message: error.message,
+            stack: error.stack,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+        });
+        
+        // 업로드 내역에 추가 (실패)
+        addUploadHistoryItem(file.name, getFileTypeFromExtension(file.name), file.size, 0, 'failed', error.message);
+        
+        // 오류를 다시 throw하여 상위 함수에서 처리
+        throw error;
+    }
+}
+
+// 통합 데이터 미리보기 표시 (React 스타일로 개선)
+function displayUnifiedDataPreview(fileName, data) {
+    console.log('미리보기 표시 시작:', fileName, data.length, '개 레코드');
+    
+    const previewSection = document.getElementById('dataPreviewSection');
+    const fileNameElement = document.getElementById('previewFileName');
+    const recordCountElement = document.getElementById('previewRecordCount');
+    const tableHead = document.getElementById('unifiedTableHead');
+    const tableBody = document.getElementById('unifiedTableBody');
+    
+    if (previewSection) previewSection.style.display = 'block';
+    if (fileNameElement) fileNameElement.textContent = fileName;
+    if (recordCountElement) recordCountElement.textContent = `${data.length.toLocaleString()}개 레코드`;
+    
+    if (data.length > 0) {
+        const allHeaders = Object.keys(data[0]);
+        
+        // 급여 데이터에 맞는 주요 컬럼 우선 표시
+        const priorityColumns = [
+            '사번', '성명', '조직', '부서', '직급', '급여영역',
+            '기본급', '상여금', '수당', '실지급액', '총지급액',
+            '급여일_급여유형', '입사일', 'name', 'salary', 'department'
+        ];
+        
+        // 우선순위에 따라 헤더 정렬
+        const sortedHeaders = [
+            ...priorityColumns.filter(col => allHeaders.includes(col)),
+            ...allHeaders.filter(col => !priorityColumns.includes(col))
+        ].slice(0, 8); // 최대 8개 컬럼만 표시
+        
+        console.log('표시할 컬럼:', sortedHeaders);
+        
+        // 테이블 헤더 생성
+        const headerRow = document.createElement('tr');
+        sortedHeaders.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = getDisplayColumnName(header);
+            th.title = header; // 원본 필드명을 툴팁으로
+            headerRow.appendChild(th);
+        });
+        tableHead.innerHTML = '';
+        tableHead.appendChild(headerRow);
+        
+        // 테이블 바디 생성 (최대 10개 행)
+        tableBody.innerHTML = '';
+        const maxRows = Math.min(data.length, 10);
+        
+        for (let i = 0; i < maxRows; i++) {
+            const row = document.createElement('tr');
+            sortedHeaders.forEach(header => {
+                const td = document.createElement('td');
+                const value = data[i][header];
+                
+                // 값 포맷팅
+                if (value !== null && value !== undefined) {
+                    // 숫자 값 (급여, 금액 등) 포맷팅
+                    if (typeof value === 'number' && (
+                        header.includes('급여') || header.includes('금액') || 
+                        header.includes('수당') || header.includes('상여') ||
+                        header.includes('salary') || header.includes('pay')
+                    )) {
+                        td.textContent = value.toLocaleString() + '원';
+                        td.className = 'amount-cell';
+                    } 
+                    // 날짜 값 포맷팅
+                    else if (header.includes('일') || header.includes('date')) {
+                        td.textContent = formatDateValue(value);
+                        td.className = 'date-cell';
+                    }
+                    // 일반 값
+                    else {
+                        td.textContent = String(value);
+                    }
+                } else {
+                    td.textContent = '-';
+                    td.className = 'empty-cell';
+                }
+                
+                row.appendChild(td);
+            });
+            tableBody.appendChild(row);
+        }
+        
+        // 더 많은 데이터가 있을 때 안내 메시지
+        if (data.length > maxRows) {
+            const moreRow = document.createElement('tr');
+            const moreCell = document.createElement('td');
+            moreCell.colSpan = sortedHeaders.length;
+            moreCell.textContent = `외 ${(data.length - maxRows).toLocaleString()}개 항목...`;
+            moreCell.className = 'more-data-cell';
+            moreRow.appendChild(moreCell);
+            tableBody.appendChild(moreRow);
+        }
+    }
+}
+
+// 컬럼명을 사용자 친화적으로 변환
+function getDisplayColumnName(header) {
+    const columnMap = {
+        '사번': '사번',
+        '성명': '성명',
+        '조직': '조직',
+        '부서': '부서',
+        '직급': '직급',
+        '급여영역': '급여영역',
+        '기본급': '기본급',
+        '상여금': '상여금',
+        '수당': '수당',
+        '실지급액': '실지급액',
+        '총지급액': '총지급액',
+        '급여일_급여유형': '급여유형',
+        '입사일': '입사일',
+        'name': '이름',
+        'salary': '급여',
+        'department': '부서',
+        'position': '직급',
+        'hire_date': '입사일',
+        'emp_id': '사번',
+        'employee_id': '사번'
+    };
+    
+    return columnMap[header] || header;
+}
+
+// 날짜 값 포맷팅
+function formatDateValue(value) {
+    if (!value) return '-';
+    
+    try {
+        // 이미 포맷된 날짜 문자열인 경우
+        if (typeof value === 'string' && value.includes('-')) {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+                return date.toLocaleDateString('ko-KR');
+            }
+        }
+        // 숫자나 다른 형식인 경우
+        return String(value);
+    } catch (error) {
+        return String(value);
+    }
+}
+
+// 통합 데이터 분석 수행 (React 컴포넌트 스타일로 개선)
+function performUnifiedDataAnalysis(data) {
+    console.log('데이터 분석 시작, 레코드 수:', data.length);
+    
+    const analysisSection = document.getElementById('analysisSection');
+    const totalRecordsElement = document.getElementById('totalRecords');
+    const totalColumnsElement = document.getElementById('totalColumns');
+    const dataTypeElement = document.getElementById('dataType');
+    
+    if (analysisSection) analysisSection.style.display = 'block';
+    if (totalRecordsElement) totalRecordsElement.textContent = data.length.toLocaleString();
+    if (totalColumnsElement && data.length > 0) {
+        totalColumnsElement.textContent = Object.keys(data[0]).length;
+    }
+    
+    // 향상된 데이터 타입 분석
+    if (dataTypeElement && data.length > 0) {
+        const sampleRecord = data[0];
+        const allKeys = Object.keys(sampleRecord);
+        console.log('데이터 분석 - 전체 키:', allKeys);
+        
+        // 급여 관련 키워드
+        const salaryKeywords = ['급여', 'salary', '지급', '기본급', '상여', '수당', 'pay', 'wage'];
+        const employeeKeywords = ['직원', 'employee', '사원', '성명', 'name', '사번', 'emp_id', 'id'];
+        const hrKeywords = ['부서', 'department', '직급', 'position', '입사일', 'hire_date'];
+        
+        const hasSalary = allKeys.some(key => 
+            salaryKeywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        const hasEmployee = allKeys.some(key => 
+            employeeKeywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        const hasHR = allKeys.some(key => 
+            hrKeywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        
+        let dataType = '일반 데이터';
+        if (hasSalary && hasEmployee) {
+            dataType = '💰 급여 데이터';
+        } else if (hasEmployee && hasHR) {
+            dataType = '👥 인사 정보';
+        } else if (hasEmployee) {
+            dataType = '👤 직원 정보';
+        } else if (hasSalary) {
+            dataType = '💳 지급 정보';
+        }
+        
+        dataTypeElement.textContent = dataType;
+        
+        // 추가 정보 표시
+        const analysisContent = document.getElementById('unifiedAnalysisContent');
+        if (analysisContent) {
+            // 기존 요약 정보 유지하고 추가 정보 표시
+            const additionalInfo = document.createElement('div');
+            additionalInfo.className = 'additional-analysis-info';
+            additionalInfo.innerHTML = `
+                <div class="analysis-details">
+                    <h4><i class="fas fa-info-circle"></i> 데이터 상세 정보</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">주요 필드:</span>
+                            <span class="detail-value">${allKeys.slice(0, 5).join(', ')}${allKeys.length > 5 ? '...' : ''}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">데이터 품질:</span>
+                            <span class="detail-value">${getDataQualityScore(data)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">파일 크기:</span>
+                            <span class="detail-value">${(JSON.stringify(data).length / 1024).toFixed(1)} KB</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 기존 추가 정보가 있으면 제거 후 새로 추가
+            const existingAdditional = analysisContent.querySelector('.additional-analysis-info');
+            if (existingAdditional) {
+                existingAdditional.remove();
+            }
+            analysisContent.appendChild(additionalInfo);
+        }
+    }
+    
+    console.log('데이터 분석 완료');
+}
+
+// 데이터 품질 점수 계산
+function getDataQualityScore(data) {
+    if (!data || data.length === 0) return '❌ 데이터 없음';
+    
+    let score = 0;
+    let checks = 0;
+    
+    // 1. 데이터 일관성 체크
+    const firstKeys = Object.keys(data[0]).sort();
+    const consistentRows = data.filter(item => {
+        const currentKeys = Object.keys(item || {}).sort();
+        return JSON.stringify(currentKeys) === JSON.stringify(firstKeys);
+    });
+    
+    const consistencyRatio = consistentRows.length / data.length;
+    score += consistencyRatio * 30;
+    checks += 30;
+    
+    // 2. 빈 값 체크
+    let totalFields = 0;
+    let filledFields = 0;
+    
+    data.slice(0, Math.min(100, data.length)).forEach(row => {
+        Object.values(row || {}).forEach(value => {
+            totalFields++;
+            if (value !== null && value !== undefined && value !== '') {
+                filledFields++;
+            }
+        });
+    });
+    
+    const fillRatio = totalFields > 0 ? filledFields / totalFields : 0;
+    score += fillRatio * 30;
+    checks += 30;
+    
+    // 3. 데이터 크기 적정성
+    if (data.length >= 10) score += 20;
+    else if (data.length >= 5) score += 15;
+    else if (data.length >= 1) score += 10;
+    checks += 20;
+    
+    // 4. 필드 개수 적정성
+    const fieldCount = firstKeys.length;
+    if (fieldCount >= 5) score += 20;
+    else if (fieldCount >= 3) score += 15;
+    else if (fieldCount >= 1) score += 10;
+    checks += 20;
+    
+    const finalScore = Math.round((score / checks) * 100);
+    
+    if (finalScore >= 90) return '🟢 우수';
+    if (finalScore >= 70) return '🟡 양호';
+    if (finalScore >= 50) return '🟠 보통';
+    return '🔴 개선 필요';
+}
+
+// 샘플 통합 데이터 로드
+function loadSampleUnifiedData() {
+    console.log('샘플 데이터 로드 시작');
+    
+    const sampleData = [
+        {
+            "사번": "EMP001",
+            "성명": "김철수",
+            "부서": "개발팀",
+            "직급": "사원",
+            "급여": 3500000,
+            "입사일": "2020-03-15"
+        },
+        {
+            "사번": "EMP002",
+            "성명": "이영희",
+            "부서": "마케팅팀",
+            "직급": "대리",
+            "급여": 4200000,
+            "입사일": "2018-07-22"
+        },
+        {
+            "사번": "EMP003",
+            "성명": "박민수",
+            "부서": "개발팀",
+            "직급": "팀장",
+            "급여": 5500000,
+            "입사일": "2015-11-08"
+        }
+    ];
+    
+    // 샘플 데이터로 미리보기 표시
+    displayUnifiedDataPreview('sample_data.json', sampleData);
+    performUnifiedDataAnalysis(sampleData);
+    
+    // 상태 업데이트
+    const statusElement = document.getElementById('unifiedUploadStatus');
+    if (statusElement) {
+        statusElement.textContent = '완료';
+        statusElement.className = 'upload-status-badge success';
+    }
+    
+    // 업로드 내역에 추가
+    addUploadHistoryItem('sample_data.json', 'JSON', 2048, 3, 'success', null, sampleData.slice(0, 2));
+    
+    console.log('샘플 데이터 로드 완료');
+}
+
+// 테스트용 JSON 파일 다운로드 함수 (실제 급여 데이터 형식)
+function downloadSampleJSON() {
+    const sampleData = [
+        {
+            "급여일_급여유형": "2024-01-정기급여",
+            "급여영역": "본사",
+            "사번": "EMP001",
+            "성명": "김철수",
+            "조직": "IT개발팀",
+            "직급": "사원",
+            "기본급": 3000000,
+            "상여금": 800000,
+            "수당": 500000,
+            "총지급액": 4300000,
+            "공제액": 400000,
+            "실지급액": 3900000,
+            "입사일": "2020-03-15"
+        },
+        {
+            "급여일_급여유형": "2024-01-정기급여",
+            "급여영역": "본사",
+            "사번": "EMP002",
+            "성명": "이영희",
+            "조직": "마케팅팀",
+            "직급": "대리",
+            "기본급": 3800000,
+            "상여금": 1000000,
+            "수당": 600000,
+            "총지급액": 5400000,
+            "공제액": 540000,
+            "실지급액": 4860000,
+            "입사일": "2018-07-22"
+        },
+        {
+            "급여일_급여유형": "2024-01-정기급여",
+            "급여영역": "본사",
+            "사번": "EMP003",
+            "성명": "박민수",
+            "조직": "IT개발팀",
+            "직급": "팀장",
+            "기본급": 5000000,
+            "상여금": 1500000,
+            "수당": 800000,
+            "총지급액": 7300000,
+            "공제액": 730000,
+            "실지급액": 6570000,
+            "입사일": "2015-11-08"
+        },
+        {
+            "급여일_급여유형": "2024-01-정기급여",
+            "급여영역": "지점",
+            "사번": "EMP004",
+            "성명": "정지원",
+            "조직": "영업팀",
+            "직급": "과장",
+            "기본급": 4200000,
+            "상여금": 1200000,
+            "수당": 700000,
+            "총지급액": 6100000,
+            "공제액": 610000,
+            "실지급액": 5490000,
+            "입사일": "2019-09-01"
+        },
+        {
+            "급여일_급여유형": "2024-01-정기급여",
+            "급여영역": "본사",
+            "사번": "EMP005",
+            "성명": "최현우",
+            "조직": "인사팀",
+            "직급": "차장",
+            "기본급": 4800000,
+            "상여금": 1400000,
+            "수당": 900000,
+            "총지급액": 7100000,
+            "공제액": 710000,
+            "실지급액": 6390000,
+            "입사일": "2017-02-14"
+        }
+    ];
+    
+    const jsonString = JSON.stringify(sampleData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_employee_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('샘플 JSON 파일 다운로드 시작');
+}
+
+// 통합 CSV 파싱
+function parseUnifiedCSV(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const csv = e.target.result;
+                const lines = csv.split('\n').filter(line => line.trim() !== '');
+                
+                if (lines.length < 2) {
+                    throw new Error('CSV 파일에 데이터가 부족합니다. 헤더와 최소 1개의 데이터 행이 필요합니다.');
+                }
+                
+                // 헤더 파싱
+                const headers = lines[0].split(',').map(header => header.trim().replace(/['"]/g, ''));
+                
+                // 데이터 파싱
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = parseCSVLine(lines[i]);
+                    if (values.length !== headers.length) {
+                        console.warn(`Line ${i + 1}: 컬럼 수가 맞지 않습니다. 스킵합니다.`);
+                        continue;
+                    }
+                    
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] || '';
+                    });
+                    data.push(row);
+                }
+                
+                if (data.length === 0) {
+                    throw new Error('유효한 데이터 행이 없습니다.');
+                }
+                
+                resolve(data);
+            } catch (error) {
+                reject(new Error(`CSV 파싱 오류: ${error.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+// CSV 라인 파싱 (쉼표와 따옴표 처리)
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    result.push(current.trim());
+    return result;
+}
+
+// 통합 JSON 파싱 (React 컴포넌트 스타일로 개선)
+function parseUnifiedJSON(file) {
+    return new Promise((resolve, reject) => {
+        console.log('JSON 파싱 시작, 파일 크기:', file.size);
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            console.log('파일 읽기 완료, 텍스트 길이:', e.target.result?.length);
+            
+            try {
+                const jsonText = e.target.result;
+                
+                // 빈 파일 체크
+                if (!jsonText || jsonText.trim() === '') {
+                    throw new Error('파일이 비어있습니다.');
+                }
+                
+                console.log('JSON 파싱 시도, 첫 100자:', jsonText.substring(0, 100));
+                
+                // 대용량 파일 처리 최적화
+                let data;
+                if (jsonText.length > 5 * 1024 * 1024) { // 5MB 이상
+                    console.log('대용량 파일 감지, 청크 방식으로 파싱');
+                    data = SafeJSONParser.parseStream(jsonText);
+                } else {
+                    console.log('SafeJSONParser로 파싱 시도');
+                    data = SafeJSONParser.parse(jsonText);
+                }
+                
+                console.log('JSON 파싱 성공, 데이터 타입:', typeof data, Array.isArray(data) ? '배열' : '객체');
+                
+                // 배열이 아닌 경우 배열로 변환
+                if (!Array.isArray(data)) {
+                    if (typeof data === 'object' && data !== null) {
+                        console.log('단일 객체를 배열로 변환');
+                        data = [data];
+                    } else {
+                        throw new Error('JSON 파일은 객체 배열 형태여야 합니다. 현재 데이터 타입: ' + typeof data);
+                    }
+                }
+                
+                console.log('배열 변환 후 길이:', data.length);
+                
+                if (data.length === 0) {
+                    throw new Error('JSON 파일에 데이터가 없습니다.');
+                }
+                
+                // 첫 번째 항목이 유효한 객체인지 확인
+                if (typeof data[0] !== 'object' || data[0] === null) {
+                    throw new Error('JSON 배열의 첫 번째 항목이 올바른 객체가 아닙니다.');
+                }
+                
+                // 필수 필드 검증 (급여 데이터 기준)
+                const firstRecord = data[0];
+                const possibleNameFields = ['성명', 'name', '이름', '직원명'];
+                const possibleIdFields = ['사번', 'id', '직원번호', 'emp_id'];
+                
+                const hasNameField = possibleNameFields.some(field => field in firstRecord);
+                const hasIdField = possibleIdFields.some(field => field in firstRecord);
+                
+                if (!hasNameField && !hasIdField) {
+                    console.warn('권장 필드 누락: 성명 또는 사번 필드가 없습니다. 계속 진행합니다.');
+                }
+                
+                // 모든 객체가 동일한 구조인지 확인
+                const firstKeys = Object.keys(data[0]).sort();
+                console.log('첫 번째 객체의 키:', firstKeys);
+                
+                const invalidRows = data.filter((item, index) => {
+                    if (typeof item !== 'object' || item === null) {
+                        if (index < 5) console.warn(`인덱스 ${index}: 객체가 아님`, item);
+                        return true;
+                    }
+                    const currentKeys = Object.keys(item).sort();
+                    const isValid = JSON.stringify(currentKeys) === JSON.stringify(firstKeys);
+                    if (!isValid && index < 5) {
+                        console.warn(`인덱스 ${index}: 키 구조 불일치`, currentKeys, 'vs', firstKeys);
+                    }
+                    return !isValid;
+                });
+                
+                if (invalidRows.length > 0) {
+                    console.warn(`${invalidRows.length}개의 행이 일관성 없는 구조를 가지고 있습니다.`);
+                    if (invalidRows.length < 10) {
+                        console.warn('문제 행들:', invalidRows);
+                    }
+                    
+                    // 일관성 없는 행이 30% 이상이면 경고
+                    if (invalidRows.length / data.length > 0.3) {
+                        throw new Error(`데이터 일관성 부족: ${Math.round(invalidRows.length / data.length * 100)}%의 행이 다른 구조를 가지고 있습니다.`);
+                    }
+                }
+                
+                console.log('JSON 파싱 완료, 최종 데이터 길이:', data.length);
+                console.log('첫 번째 레코드 샘플:', data[0]);
+                
+                resolve(data);
+            } catch (error) {
+                console.error('JSON 파싱 중 오류:', error);
+                if (e.target.result && typeof e.target.result === 'string') {
+                    console.error('원본 텍스트 샘플:', e.target.result.substring(0, 500));
+                }
+                reject(new Error(`JSON 파싱 오류: ${error.message}`));
+            }
+        };
+        
+        reader.onerror = (error) => {
+            console.error('파일 읽기 오류:', error);
+            reject(new Error('파일을 읽을 수 없습니다.'));
+        };
+        
+        console.log('FileReader로 파일 읽기 시작');
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+// 대용량 JSON 파일을 청크 단위로 파싱
+function parseJSONInChunks(jsonText) {
+    try {
+        // 메모리 효율적인 파싱을 위해 여전히 JSON.parse 사용
+        // 실제 스트리밍 파서는 복잡하므로 향후 개선 예정
+        return JSON.parse(jsonText);
+    } catch (error) {
+        throw new Error('대용량 JSON 파싱 실패: ' + error.message);
+    }
+}
+
+// 통합 Excel 파싱 (기본적인 구현)
+function parseUnifiedExcel(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                // Excel 파일의 기본적인 처리를 위해 CSV 변환을 권장
+                reject(new Error('Excel 파일 지원을 위해서는 추가 라이브러리가 필요합니다.\nCSV 형식으로 변환 후 업로드해 주세요.\n\n변환 방법:\n1. Excel에서 파일 열기\n2. "다른 이름으로 저장" 클릭\n3. 파일 형식을 "CSV (쉼표로 분리)"로 선택\n4. 저장 후 업로드'));
+            } catch (error) {
+                reject(new Error(`Excel 파싱 오류: ${error.message}`));
+            }
+        };
+        reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// 데이터를 로컬 스토리지에 저장
+function saveUnifiedDataToStorage(fileName, data) {
+    try {
+        const timestamp = new Date().toISOString();
+        const savedData = {
+            fileName: fileName,
+            data: data,
+            uploadTime: timestamp,
+            recordCount: data.length
+        };
+        
+        // 최근 업로드 데이터 저장 (최대 5개)
+        let recentUploads = JSON.parse(localStorage.getItem('recentUploads') || '[]');
+        recentUploads.unshift(savedData);
+        recentUploads = recentUploads.slice(0, 5); // 최대 5개만 유지
+        
+        localStorage.setItem('recentUploads', JSON.stringify(recentUploads));
+        localStorage.setItem(`uploadedData_${fileName}_${Date.now()}`, JSON.stringify(savedData));
+        
+        console.log(`데이터 저장 완료: ${fileName} (${data.length}개 레코드)`);
+    } catch (error) {
+        console.error('데이터 저장 오류:', error);
+    }
+}
+
+// 저장된 데이터 목록 조회
+function getSavedDataList() {
+    try {
+        return JSON.parse(localStorage.getItem('recentUploads') || '[]');
+    } catch (error) {
+        console.error('저장된 데이터 조회 오류:', error);
+        return [];
+    }
+}
+
+function getFileTypeFromExtension(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch (extension) {
+        case 'xlsx':
+        case 'xls':
+            return 'Excel';
+        case 'csv':
+            return 'CSV';
+        case 'json':
+            return 'JSON';
+        default:
+            return 'Unknown';
+    }
+}
+
+// React 스타일 메시지 시스템
+function showUploadMessage(type, message, details = null) {
+    // 기존 메시지 제거
+    removeUploadMessage();
+    
+    const messageContainer = document.createElement('div');
+    messageContainer.id = 'upload-message';
+    messageContainer.className = `upload-message ${type}`;
+    
+    const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    const iconColor = type === 'success' ? '#10b981' : '#ef4444';
+    const bgColor = type === 'success' ? '#ecfdf5' : '#fef2f2';
+    const borderColor = type === 'success' ? '#d1fae5' : '#fecaca';
+    const textColor = type === 'success' ? '#065f46' : '#991b1b';
+    
+    messageContainer.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 400px;
+        padding: 1rem;
+        background: ${bgColor};
+        border: 1px solid ${borderColor};
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    let messageHTML = `
+        <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+            <i class="fas ${iconClass}" style="color: ${iconColor}; margin-top: 2px; font-size: 1.25rem;"></i>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; color: ${textColor}; margin-bottom: 0.25rem;">
+                    ${type === 'success' ? '성공' : '오류'}
+                </div>
+                <div style="color: ${textColor}; font-size: 0.875rem; line-height: 1.4;">
+                    ${message}
+                </div>
+    `;
+    
+    if (details) {
+        messageHTML += `
+                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid ${borderColor}; font-size: 0.75rem; color: ${textColor};">
+                    <div>파일: ${details.fileName}</div>
+                    <div>크기: ${Math.round(details.fileSize / 1024)}KB</div>
+                    <div>형식: ${details.fileType}</div>
+                </div>
+        `;
+    }
+    
+    messageHTML += `
+            </div>
+            <button onclick="removeUploadMessage()" style="
+                background: none; 
+                border: none; 
+                color: ${textColor}; 
+                cursor: pointer; 
+                padding: 0.25rem;
+                font-size: 1rem;
+            ">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    messageContainer.innerHTML = messageHTML;
+    document.body.appendChild(messageContainer);
+    
+    // 5초 후 자동 제거
+    setTimeout(removeUploadMessage, 5000);
+}
+
+function removeUploadMessage() {
+    const existing = document.getElementById('upload-message');
+    if (existing) {
+        existing.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (existing.parentNode) {
+                existing.parentNode.removeChild(existing);
+            }
+        }, 300);
+    }
+}
+
+// CSS 애니메이션 추가
+function addMessageAnimations() {
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// 페이지 로드 시 애니메이션 CSS 추가
+document.addEventListener('DOMContentLoaded', addMessageAnimations);
+
+// TypeScript 스타일 파일 검증 클래스
+class FileValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'FileValidationError';
+    }
+}
+
+// 급여 파일 검증 함수
+function validatePayrollFile(file) {
+    console.log('파일 검증 시작:', file.name, file.type, file.size);
+    
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['application/json', 'text/plain', 'text/csv', 'application/vnd.ms-excel'];
+    const allowedExtensions = ['.json', '.txt', '.csv', '.xlsx', '.xls'];
+
+    if (file.size > maxSize) {
+        throw new FileValidationError('파일 크기가 10MB를 초과합니다.');
+    }
+
+    const hasValidType = allowedTypes.includes(file.type) || file.type === '';
+    const hasValidExtension = allowedExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!hasValidExtension) {
+        throw new FileValidationError('지원하지 않는 파일 형식입니다. JSON, CSV, Excel 파일만 업로드 가능합니다.');
+    }
+    
+    console.log('파일 검증 통과');
+}
+
+// 급여 데이터 검증 함수
+function validatePayrollData(data) {
+    console.log('데이터 검증 시작, 레코드 수:', data?.length);
+    
+    if (!Array.isArray(data)) {
+        throw new FileValidationError('올바른 배열 형태가 아닙니다.');
+    }
+
+    if (data.length === 0) {
+        throw new FileValidationError('빈 데이터입니다.');
+    }
+
+    const requiredFields = ['사번', '성명', '급여영역'];
+    const alternativeFields = {
+        '사번': ['사번', 'emp_id', 'employee_id', 'id'],
+        '성명': ['성명', 'name', '이름', '직원명'],
+        '급여영역': ['급여영역', 'payroll_area', '지역', 'area']
+    };
+    
+    const firstRecord = data[0];
+    const missingFields = [];
+    
+    for (const field of requiredFields) {
+        const alternatives = alternativeFields[field] || [field];
+        const hasField = alternatives.some(alt => firstRecord.hasOwnProperty(alt));
+        
+        if (!hasField) {
+            missingFields.push(field);
+        }
+    }
+
+    if (missingFields.length > 0) {
+        console.warn(`권장 필드 누락: ${missingFields.join(', ')}`);
+        // 경고만 표시하고 계속 진행 (완전 차단하지 않음)
+        showUploadMessage('warning', `권장 필드가 누락되었습니다: ${missingFields.join(', ')}\n계속 진행합니다.`);
+    }
+    
+    console.log('데이터 검증 통과');
+}
+
+// 급여 API로 데이터 전송
+async function sendToPayrollAPI(data, fileName) {
+    console.log('API 전송 시작:', fileName, data.length, '개 레코드');
+    console.log('전송할 데이터 타입:', typeof data, Array.isArray(data) ? '배열' : '비배열');
+    console.log('전송할 데이터 샘플:', data.slice(0, 1));
+    
+    try {
+        // 파일 이름과 데이터를 함께 전송
+        const payload = {
+            fileName: fileName,
+            data: data
+        };
+        
+        console.log('전송할 payload 구조:', {
+            fileName: payload.fileName,
+            dataType: typeof payload.data,
+            isArray: Array.isArray(payload.data),
+            dataLength: payload.data?.length
+        });
+        
+        const payloadString = JSON.stringify(payload);
+        console.log('JSON 문자열 길이:', payloadString.length);
+        console.log('JSON 문자열 시작 100자:', payloadString.substring(0, 100));
+        
+        const response = await fetch('/api/payroll/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: payloadString
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || `서버 오류: ${response.status}`);
+        }
+        
+        if (!result.success) {
+            throw new Error(result.error || '업로드 실패');
+        }
+        
+        console.log('API 전송 성공:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('API 전송 오류:', error);
+        throw error;
+    }
+}
+
+// 서버에서 업로드된 파일 목록 가져오기
+async function fetchServerFileList() {
+    try {
+        const response = await fetch('/api/payroll/list');
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('서버 파일 목록:', result.files);
+            return result.files;
+        } else {
+            throw new Error(result.error || '파일 목록 조회 실패');
+        }
+    } catch (error) {
+        console.error('서버 파일 목록 조회 오류:', error);
+        return [];
+    }
+}
+
+// 서버에서 파일 삭제
+async function deleteServerFile(fileName) {
+    try {
+        const response = await fetch('/api/payroll/delete', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ fileName })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('서버 파일 삭제 성공:', fileName);
+            showUploadMessage('success', `${fileName} 파일이 서버에서 삭제되었습니다.`);
+            return true;
+        } else {
+            throw new Error(result.error || '파일 삭제 실패');
+        }
+    } catch (error) {
+        console.error('서버 파일 삭제 오류:', error);
+        showUploadMessage('error', `서버 파일 삭제 실패: ${error.message}`);
+        return false;
+    }
+}
+
+// 업로드 화면 관리 함수들
+function refreshUploadHistory() {
+    loadUploadHistory();
+}
+
+function clearUploadHistory() {
+    if (confirm('업로드 내역을 모두 삭제하시겠습니까?')) {
+        localStorage.removeItem('uploadHistory');
+        loadUploadHistory();
+        alert('업로드 내역이 삭제되었습니다.');
+    }
+}
+
+async function loadUploadHistory() {
+    console.log('업로드 내역 로딩 시작 (서버 파일 포함)');
+    
+    // 로컬 스토리지에서 클라이언트 업로드 내역 가져오기
+    let localHistory = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+    
+    // 서버에서 파일 목록 가져오기
+    const serverFiles = await fetchServerFileList();
+    console.log('서버 파일 목록:', serverFiles.length, '개');
+    
+    // 서버 파일을 업로드 내역 형식으로 변환
+    const serverHistory = serverFiles.map(file => ({
+        id: 'server-' + file.fileName.replace(/[^a-zA-Z0-9]/g, '-'),
+        fileName: file.fileName + ' 🌐',
+        fileType: 'JSON (서버)',
+        fileSize: file.size,
+        recordCount: null, // 서버에서는 레코드 수를 알 수 없음
+        uploadDate: file.uploadedAt,
+        status: 'server',
+        errorMessage: null,
+        dataPreview: null,
+        isServerFile: true
+    }));
+    
+    // 빈 상태라면 샘플 데이터 추가 (로컬만)
+    if (localHistory.length === 0) {
+        localHistory = [
+            {
+                id: '1',
+                fileName: 'sample_employee_data.csv',
+                fileType: 'CSV',
+                fileSize: 15680,
+                recordCount: 50,
+                uploadDate: new Date(Date.now() - 86400000).toISOString(),
+                status: 'success',
+                dataPreview: [
+                    {"사번": "EMP001", "성명": "김철수", "부서": "개발팀", "급여": 3500000},
+                    {"사번": "EMP002", "성명": "이영희", "부서": "마케팅팀", "급여": 4200000}
+                ]
+            },
+            {
+                id: '2',
+                fileName: 'salary_data_2024_01.json',
+                fileType: 'JSON',
+                fileSize: 25430,
+                recordCount: 120,
+                uploadDate: new Date(Date.now() - 172800000).toISOString(),
+                status: 'success'
+            }
+        ];
+        localStorage.setItem('uploadHistory', JSON.stringify(localHistory));
+    }
+    
+    // 로컬과 서버 파일 합치기
+    const combinedHistory = [...localHistory, ...serverHistory];
+    
+    // 업로드 날짜 기준으로 정렬 (최신 순)
+    combinedHistory.sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate));
+    
+    console.log('총 파일 수:', combinedHistory.length, '(로컬:', localHistory.length, ', 서버:', serverHistory.length, ')');
+    
+    // 통계 업데이트
+    updateUploadStats(combinedHistory);
+    
+    // 파일 목록 업데이트
+    updateUploadFilesList(combinedHistory);
+}
+
+function updateUploadStats(uploadHistory) {
+    const totalFiles = uploadHistory.length;
+    const successfulUploads = uploadHistory.filter(item => item.status === 'success').length;
+    const failedUploads = uploadHistory.filter(item => item.status === 'failed').length;
+    const totalRecords = uploadHistory.reduce((sum, item) => sum + (item.recordCount || 0), 0);
+    
+    const totalFilesElement = document.getElementById('totalUploadedFiles');
+    const successfulElement = document.getElementById('successfulUploads');
+    const failedElement = document.getElementById('failedUploads');
+    const totalRecordsElement = document.getElementById('totalRecordsUploaded');
+    
+    if (totalFilesElement) totalFilesElement.textContent = totalFiles;
+    if (successfulElement) successfulElement.textContent = successfulUploads;
+    if (failedElement) failedElement.textContent = failedUploads;
+    if (totalRecordsElement) totalRecordsElement.textContent = totalRecords.toLocaleString();
+}
+
+function updateUploadFilesList(uploadHistory) {
+    const tableBody = document.getElementById('uploadFilesTableBody');
+    if (!tableBody) return;
+    
+    if (uploadHistory.length === 0) {
+        tableBody.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>업로드된 파일이 없습니다</p>
+                <button class="btn" onclick="switchPage('data-center')">
+                    <i class="fas fa-upload"></i> 파일 업로드하기
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = uploadHistory.map(item => `
+        <div class="table-row">
+            <div class="table-col">
+                <div class="file-info">
+                    <i class="fas ${getFileIcon(item.fileName)}"></i>
+                    <span>${item.fileName}</span>
+                </div>
+            </div>
+            <div class="table-col">${item.fileType || 'Unknown'}</div>
+            <div class="table-col">${formatFileSize(item.fileSize || 0)}</div>
+            <div class="table-col">${(item.recordCount || 0).toLocaleString()}</div>
+            <div class="table-col">${formatDate(item.uploadDate)}</div>
+            <div class="table-col">
+                <span class="status-badge ${item.status}">${getStatusText(item.status)}</span>
+            </div>
+            <div class="table-col">
+                <button class="btn-icon" onclick="viewFileDetail('${item.id}')" title="상세보기">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-icon danger" onclick="deleteUploadItem('${item.id}')" title="삭제">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getFileIcon(fileName) {
+    const extension = fileName.split('.').pop().toLowerCase();
+    switch (extension) {
+        case 'xlsx':
+        case 'xls':
+            return 'fa-file-excel';
+        case 'csv':
+            return 'fa-file-csv';
+        case 'json':
+            return 'fa-file-code';
+        default:
+            return 'fa-file';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'});
+}
+
+function getStatusText(status) {
+    switch (status) {
+        case 'success':
+            return '성공';
+        case 'failed':
+            return '실패';
+        case 'processing':
+            return '처리중';
+        default:
+            return '알 수 없음';
+    }
+}
+
+function viewFileDetail(fileId) {
+    const uploadHistory = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+    const fileItem = uploadHistory.find(item => item.id === fileId);
+    
+    if (!fileItem) {
+        alert('파일 정보를 찾을 수 없습니다.');
+        return;
+    }
+    
+    const modal = document.getElementById('fileDetailModal');
+    const content = document.getElementById('fileDetailContent');
+    
+    if (modal && content) {
+        content.innerHTML = `
+            <div class="file-detail-info">
+                <div class="detail-row">
+                    <strong>파일명:</strong> ${fileItem.fileName}
+                </div>
+                <div class="detail-row">
+                    <strong>파일 타입:</strong> ${fileItem.fileType || 'Unknown'}
+                </div>
+                <div class="detail-row">
+                    <strong>파일 크기:</strong> ${formatFileSize(fileItem.fileSize || 0)}
+                </div>
+                <div class="detail-row">
+                    <strong>레코드 수:</strong> ${(fileItem.recordCount || 0).toLocaleString()}개
+                </div>
+                <div class="detail-row">
+                    <strong>업로드 일시:</strong> ${formatDate(fileItem.uploadDate)}
+                </div>
+                <div class="detail-row">
+                    <strong>상태:</strong> <span class="status-badge ${fileItem.status}">${getStatusText(fileItem.status)}</span>
+                </div>
+                ${fileItem.errorMessage ? `
+                    <div class="detail-row">
+                        <strong>오류 메시지:</strong> 
+                        <div class="error-message">${fileItem.errorMessage}</div>
+                    </div>
+                ` : ''}
+                ${fileItem.dataPreview ? `
+                    <div class="detail-row">
+                        <strong>데이터 미리보기:</strong>
+                        <div class="data-preview-mini">
+                            <pre>${JSON.stringify(fileItem.dataPreview, null, 2)}</pre>
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        modal.style.display = 'block';
+    }
+}
+
+function closeFileDetailModal() {
+    const modal = document.getElementById('fileDetailModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function deleteUploadItem(fileId) {
+    if (confirm('이 업로드 내역을 삭제하시겠습니까?')) {
+        const uploadHistory = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+        const updatedHistory = uploadHistory.filter(item => item.id !== fileId);
+        localStorage.setItem('uploadHistory', JSON.stringify(updatedHistory));
+        loadUploadHistory();
+    }
+}
+
+function addUploadHistoryItem(fileName, fileType, fileSize, recordCount, status, errorMessage = null, dataPreview = null) {
+    const uploadHistory = JSON.parse(localStorage.getItem('uploadHistory') || '[]');
+    const newItem = {
+        id: Date.now().toString(),
+        fileName: fileName,
+        fileType: fileType,
+        fileSize: fileSize,
+        recordCount: recordCount,
+        uploadDate: new Date().toISOString(),
+        status: status,
+        errorMessage: errorMessage,
+        dataPreview: dataPreview
+    };
+    uploadHistory.unshift(newItem); // 최신 항목을 앞에 추가
+    localStorage.setItem('uploadHistory', JSON.stringify(uploadHistory));
 }
 
 // 전문가 분석&예측 탭 전환 함수
