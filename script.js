@@ -56,6 +56,134 @@ function setupPageSpecificEvents(pageName) {
             // AI 채팅 페이지 이벤트 설정 (향후 구현)
             console.log('AI 채팅 페이지 이벤트 설정');
             break;
+        case 'insurance':
+            // 4대보험 요율 페이지 초기화
+            setTimeout(() => {
+                console.log('4대보험 요율 페이지 초기화 시작');
+                if (typeof initializeInsuranceRates === 'function') {
+                    initializeInsuranceRates();
+                    console.log('4대보험 요율 차트 초기화 완료');
+                } else {
+                    console.log('insurance_rates.js 로드 대기 중...');
+                    // insurance_rates.js 로드 완료 대기
+                    const checkInsuranceRates = setInterval(() => {
+                        if (typeof initializeInsuranceRates === 'function') {
+                            initializeInsuranceRates();
+                            console.log('4대보험 요율 차트 초기화 완료 (지연)');
+                            clearInterval(checkInsuranceRates);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
+        case 'calculation':
+            // 스마트 인건비 계산기 초기화
+            setTimeout(() => {
+                console.log('스마트 인건비 계산기 초기화 시작');
+                if (typeof initializeSalaryCalculator === 'function') {
+                    initializeSalaryCalculator();
+                    console.log('스마트 인건비 계산기 초기화 완료');
+                } else {
+                    console.log('salary_calculator.js 로드 대기 중...');
+                    // salary_calculator.js 로드 완료 대기
+                    const checkSalaryCalculator = setInterval(() => {
+                        if (typeof initializeSalaryCalculator === 'function') {
+                            initializeSalaryCalculator();
+                            console.log('스마트 인건비 계산기 초기화 완료 (지연)');
+                            clearInterval(checkSalaryCalculator);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
+        case 'comprehensive-labor':
+            // 종합 인건비 페이지 - 새로운 종합 인건비 시스템 초기화
+            setTimeout(() => {
+                console.log('종합 인건비 페이지 초기화 시작');
+                
+                // comprehensive_labor.js의 HTML 가져오기
+                if (typeof getComprehensiveLaborHTML === 'function') {
+                    const container = document.getElementById('comprehensive-labor-content');
+                    if (container) {
+                        container.innerHTML = getComprehensiveLaborHTML();
+                        console.log('종합 인건비 HTML 삽입 완료');
+                        
+                        // 종합 인건비 차트 초기화
+                        if (typeof initializeComprehensiveLabor === 'function') {
+                            setTimeout(() => {
+                                initializeComprehensiveLabor();
+                                console.log('종합 인건비 시스템 초기화 완료');
+                            }, 100);
+                        }
+                    }
+                } else {
+                    console.log('comprehensive_labor.js 로드 대기 중...');
+                    // comprehensive_labor.js 로드 완료 대기
+                    const checkComprehensiveLabor = setInterval(() => {
+                        if (typeof getComprehensiveLaborHTML === 'function') {
+                            const container = document.getElementById('comprehensive-labor-content');
+                            if (container) {
+                                container.innerHTML = getComprehensiveLaborHTML();
+                                console.log('종합 인건비 HTML 삽입 완료 (지연)');
+                                
+                                // 종합 인건비 차트 초기화
+                                if (typeof initializeComprehensiveLabor === 'function') {
+                                    setTimeout(() => {
+                                        initializeComprehensiveLabor();
+                                        console.log('종합 인건비 시스템 초기화 완료 (지연)');
+                                    }, 100);
+                                }
+                            }
+                            clearInterval(checkComprehensiveLabor);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
+        case 'expert-analysis':
+            // 전문가 분석&예측 페이지 - 기존 React 변환 시스템 초기화
+            setTimeout(() => {
+                console.log('전문가 분석&예측 페이지 초기화 시작');
+                
+                // expert_analysis.js의 HTML 가져오기
+                if (typeof getExpertAnalysisHTML === 'function') {
+                    const container = document.getElementById('expert-analysis-content');
+                    if (container) {
+                        container.innerHTML = getExpertAnalysisHTML();
+                        console.log('전문가 분석&예측 HTML 삽입 완료');
+                        
+                        // 차트 초기화
+                        if (typeof initializeDashboardCharts === 'function') {
+                            setTimeout(() => {
+                                initializeDashboardCharts();
+                                console.log('전문가 분석&예측 차트 초기화 완료');
+                            }, 100);
+                        }
+                    }
+                } else {
+                    console.log('expert_analysis.js 로드 대기 중...');
+                    // expert_analysis.js 로드 완료 대기
+                    const checkExpertAnalysis = setInterval(() => {
+                        if (typeof getExpertAnalysisHTML === 'function') {
+                            const container = document.getElementById('expert-analysis-content');
+                            if (container) {
+                                container.innerHTML = getExpertAnalysisHTML();
+                                console.log('전문가 분석&예측 HTML 삽입 완료 (지연)');
+                                
+                                // 차트 초기화
+                                if (typeof initializeDashboardCharts === 'function') {
+                                    setTimeout(() => {
+                                        initializeDashboardCharts();
+                                        console.log('전문가 분석&예측 차트 초기화 완료 (지연)');
+                                    }, 100);
+                                }
+                            }
+                            clearInterval(checkExpertAnalysis);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
         default:
             console.log('기본 페이지 이벤트 설정');
     }
@@ -66,54 +194,26 @@ function getPageContent(pageName) {
     switch (pageName) {
         case 'upload':
             return getUploadPageContent();
-        case 'employee':
-            return `
-                <div class="page-header">
-                    <h2><i class="fas fa-users"></i> 직원 정보 관리</h2>
-                    <p>직원 정보를 관리하고 업데이트하세요</p>
-                </div>
-                <div class="coming-soon">
-                    <i class="fas fa-users"></i>
-                    <h3>직원 정보 관리</h3>
-                    <p>직원 정보 관리 기능이 곧 추가됩니다</p>
-                </div>
-            `;
+
         case 'insurance':
-            return `
-                <div class="page-header">
-                    <h2><i class="fas fa-shield-alt"></i> 4대 보험 요율</h2>
-                    <p>4대보험 요율을 확인하고 관리하세요</p>
-                </div>
-                <div class="coming-soon">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>4대 보험 요율</h3>
-                    <p>4대보험 요율 관리 기능이 곧 추가됩니다</p>
-                </div>
-            `;
+            // insurance_rates.js에서 HTML을 가져옴
+            if (typeof getInsuranceRatesHTML === 'function') {
+                return getInsuranceRatesHTML();
+            } else {
+                return `
+                    <div class="page-header">
+                        <h2><i class="fas fa-shield-alt"></i> 4대 보험 요율</h2>
+                        <p>4대보험 요율 시스템을 로드하는 중...</p>
+                    </div>
+                    <div class="loading-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>4대보험 요율 차트를 로드하는 중...</p>
+                    </div>
+                `;
+            }
         case 'calculation':
-            return `
-                <div class="page-header">
-                    <h2><i class="fas fa-calculator"></i> 인건비 계산</h2>
-                    <p>인건비를 계산하고 시뮬레이션하세요</p>
-                </div>
-                <div class="coming-soon">
-                    <i class="fas fa-calculator"></i>
-                    <h3>인건비 계산</h3>
-                    <p>인건비 계산 기능이 곧 추가됩니다</p>
-                </div>
-            `;
-        case 'retirement':
-            return `
-                <div class="page-header">
-                    <h2><i class="fas fa-piggy-bank"></i> 퇴직금 계산기</h2>
-                    <p>퇴직금을 계산하고 예측하세요</p>
-                </div>
-                <div class="coming-soon">
-                    <i class="fas fa-piggy-bank"></i>
-                    <h3>퇴직금 계산기</h3>
-                    <p>퇴직금 계산 기능이 곧 추가됩니다</p>
-                </div>
-            `;
+            return getSmartSalaryCalculatorHTML();
+
         case 'provision':
             return `
                 <div class="page-header">
@@ -186,9 +286,135 @@ function getPageContent(pageName) {
                     <p>리스크 매트릭스 기능이 곧 추가됩니다</p>
                 </div>
             `;
+        case 'comprehensive-labor':
+            return `
+                <div class="page-header">
+                    <h2><i class="fas fa-chart-line"></i> 종합 인건비 관리</h2>
+                    <p>AI 기반 전문가 수준의 인건비 분석 및 예측</p>
+                </div>
+                <div id="comprehensive-labor-content">
+                    <!-- 전문가 분석&예측 내용이 여기에 로드됩니다 -->
+                    <div class="expert-analysis-container">
+                        <div class="loading-message">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>전문가 분석 시스템을 로드하는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        case 'upload':
+            return `
+                <div class="page-header">
+                    <h2><i class="fas fa-upload"></i> 통합 데이터 업로드</h2>
+                    <p>다양한 형식의 데이터를 업로드하세요</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-upload"></i>
+                    <h3>통합 데이터 업로드</h3>
+                    <p>통합 데이터 업로드 기능이 곧 추가됩니다</p>
+                </div>
+            `;
+        case 'expert-analysis':
+            return `
+                <div class="page-header">
+                    <h2><i class="fas fa-brain"></i> 전문가 분석&예측</h2>
+                    <p>AI 기반 고급 인건비 분석 및 예측 시스템</p>
+                </div>
+                <div id="expert-analysis-content">
+                    <!-- 전문가 분석&예측 내용이 여기에 로드됩니다 -->
+                    <div class="expert-analysis-container">
+                        <div class="loading-message">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>전문가 분석&예측 시스템을 로드하는 중...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
         default:
             return '<p>페이지를 찾을 수 없습니다.</p>';
     }
+}
+
+// 스마트 인건비 계산기 HTML 생성 (네오모피즘 스타일)
+function getSmartSalaryCalculatorHTML() {
+    return `
+        <div class="salary-calculator-page" style="max-width: 1200px; margin: 0 auto; padding: 2rem; background: #e0e7ff; min-height: 100vh;">
+            <!-- 페이지 헤더 (네오모피즘) -->
+            <div style="text-align: center; margin-bottom: 3rem; padding: 3rem 2rem; background: #e0e7ff; border-radius: 20px; box-shadow: 20px 20px 40px #c7d2fe, -20px -20px 40px #f9fafb;">
+                <h1 style="font-size: 2.8rem; margin-bottom: 0.5rem; font-weight: 800; color: #374151; letter-spacing: -0.02em;">
+                    <i class="fas fa-calculator" style="color: #6366f1; margin-right: 0.5rem;"></i>스마트 인건비 계산기
+                </h1>
+                <p style="font-size: 1.1rem; color: #6b7280; margin: 0; font-weight: 400;">다양한 수당과 급여를 정확하게 계산하는 올인원 계산기</p>
+            </div>
+
+            <!-- 계산기 탭 네비게이션 (네오모피즘) -->
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; background: #e0e7ff; padding: 1.5rem; border-radius: 16px; box-shadow: inset 8px 8px 16px #c7d2fe, inset -8px -8px 16px #f9fafb; justify-content: center;">
+                <div class="calc-tab active" data-tab="salary" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 600; color: #6366f1; background: #e0e7ff; box-shadow: 8px 8px 16px #c7d2fe, -8px -8px 16px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-wallet" style="margin-right: 0.5rem;"></i>직원급여
+                </div>
+                <div class="calc-tab" data-tab="annual-leave" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>연차수당
+                </div>
+                <div class="calc-tab" data-tab="overtime" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-clock" style="margin-right: 0.5rem;"></i>연장근로수당
+                </div>
+                <div class="calc-tab" data-tab="parental-leave" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-baby" style="margin-right: 0.5rem;"></i>육아휴직급여
+                </div>
+                <div class="calc-tab" data-tab="reduced-hours" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-user-clock" style="margin-right: 0.5rem;"></i>단축근로
+                </div>
+                <div class="calc-tab" data-tab="holiday-work" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-calendar-check" style="margin-right: 0.5rem;"></i>휴일근로
+                </div>
+                <div class="calc-tab" data-tab="retirement" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-piggy-bank" style="margin-right: 0.5rem;"></i>퇴직금(DB/DC)
+                </div>
+                <div class="calc-tab" data-tab="insurance" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-shield-alt" style="margin-right: 0.5rem;"></i>4대보험료
+                </div>
+                <div class="calc-tab" data-tab="minimum-wage" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
+                    <i class="fas fa-balance-scale" style="margin-right: 0.5rem;"></i>최저임금검증
+                </div>
+            </div>
+
+            <!-- 계산기 컨텐츠 영역 (네오모피즘) -->
+            <div id="calculator-content" style="margin-bottom: 2rem;">
+                <!-- 각 계산기가 동적으로 로드됩니다 -->
+            </div>
+
+            <!-- 계산 결과 영역 (네오모피즘) -->
+            <div id="calculation-results" style="display: none; background: #e0e7ff; border-radius: 16px; padding: 2rem; box-shadow: 20px 20px 40px #c7d2fe, -20px -20px 40px #f9fafb;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="color: #374151; margin: 0; font-weight: 700; font-size: 1.5rem;">
+                        <i class="fas fa-chart-bar" style="color: #6366f1; margin-right: 0.5rem;"></i>계산 결과
+                    </h3>
+                    <button onclick="exportCalculationResult()" style="background: #e0e7ff; color: #6366f1; border: none; padding: 0.75rem 1.25rem; border-radius: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 600; box-shadow: 8px 8px 16px #c7d2fe, -8px -8px 16px #f9fafb; transition: all 0.3s ease;">
+                        <i class="fas fa-copy" style="margin-right: 0.3rem;"></i>결과 복사
+                    </button>
+                </div>
+                <div id="result-content" style="background: #e0e7ff; border-radius: 12px; padding: 1.5rem; box-shadow: inset 8px 8px 16px #c7d2fe, inset -8px -8px 16px #f9fafb;">
+                    <!-- 계산 결과가 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <!-- 네오모피즘 스타일 적용을 위한 CSS -->
+            <style>
+                .calc-tab.active {
+                    box-shadow: 8px 8px 16px #c7d2fe, -8px -8px 16px #f9fafb !important;
+                    color: #6366f1 !important;
+                }
+                .calc-tab:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 12px 12px 20px #c7d2fe, -12px -12px 20px #f9fafb !important;
+                }
+                .calc-tab:active {
+                    transform: translateY(0px);
+                    box-shadow: inset 6px 6px 12px #c7d2fe, inset -6px -6px 12px #f9fafb !important;
+                }
+            </style>
+        </div>
+    `;
 }
 
 // 메뉴 클릭 이벤트 설정

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse - 대용량 파일 업로드</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 3rem;
+        }
+
+        .upload-zone {
+            border: 3px dashed #ddd;
+            border-radius: 16px;
+            padding: 4rem 2rem;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-zone i {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .upload-zone p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .progress-container {
+            display: none;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .result-container {
+            display: none;
+            margin-top: 2rem;
+            padding: 2rem;
+            background: #e8f5e8;
+            border-radius: 12px;
+            border-left: 4px solid #28a745;
+        }
+
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .memory-widget {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            z-index: 1000;
+            min-width: 220px;
+            display: none;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i> 메인으로
+            </a>
+            <h1><i class="fas fa-rocket"></i> PayPulse</h1>
+            <p>대용량 파일 처리 시스템 - 최대 100MB까지 지원</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h3>파일을 여기로 드래그하거나 클릭하세요</h3>
+                <p>Excel (.xlsx, .xls), CSV (.csv), JSON (.json) 파일 지원</p>
+                <button class="btn">
+                    <i class="fas fa-file-upload"></i> 파일 선택
+                </button>
+            </div>
+
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.json" style="display: none;">
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">업로드 중...</div>
+            </div>
+
+            <div class="result-container" id="resultContainer">
+                <h3><i class="fas fa-check-circle"></i> 업로드 완료!</h3>
+                <div class="result-stats" id="resultStats">
+                    <!-- 통계가 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="memory-widget" id="memoryWidget">
+        <div style="margin-bottom: 0.5rem;">
+            <i class="fas fa-memory"></i> <strong>메모리 모니터</strong>
+        </div>
+        <div id="memoryUsage">모니터링 중...</div>
+        <div style="background: #333; height: 4px; border-radius: 2px; margin-top: 0.5rem; overflow: hidden;">
+            <div id="memoryFill" style="background: #10b981; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+        </div>
+    </div>
+
+    <script src="large_file_processor.js"></script>
+    <script src="memory_optimizer.js"></script>
+    <script>
+        // 파일 업로드 처리
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+        
+        // 드래그 앤 드롭 설정
+        const uploadZone = document.getElementById('uploadZone');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, preventDefaults, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, () => {
+                uploadZone.classList.add('drag-over');
+            });
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadZone.addEventListener(eventName, () => {
+                uploadZone.classList.remove('drag-over');
+            });
+        });
+        
+        uploadZone.addEventListener('drop', handleDrop, false);
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+        
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+        
+        async function processFile(file) {
+            console.log(`📁 파일 선택됨: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+            
+            // UI 업데이트
+            showProgress(true);
+            showMemoryWidget(true);
+            
+            // 메모리 최적화 활성화
+            if (typeof enableMemoryOptimizationForLargeFiles === 'function') {
+                enableMemoryOptimizationForLargeFiles();
+            }
+            
+            try {
+                let data;
+                
+                if (file.size > 10 * 1024 * 1024) { // 10MB 이상
+                    console.log('🚀 대용량 파일 처리 모드');
+                    updateProgress(10, '대용량 파일 처리 시작...');
+                    
+                    const processor = new LargeFileProcessor(file);
+                    data = await processor.processFile();
+                } else {
+                    console.log('📁 일반 파일 처리 모드');
+                    updateProgress(30, '파일 읽는 중...');
+                    
+                    const processor = new LargeFileProcessor(file);
+                    data = await processor.processSmallFile();
+                }
+                
+                updateProgress(100, '처리 완료!');
+                
+                setTimeout(() => {
+                    showProgress(false);
+                    showResult(data, file);
+                }, 500);
+                
+            } catch (error) {
+                console.error('❌ 파일 처리 실패:', error);
+                updateProgress(0, `오류: ${error.message}`);
+                
+                setTimeout(() => {
+                    showProgress(false);
+                    alert(`파일 처리 실패: ${error.message}`);
+                }, 1000);
+            }
+        }
+        
+        function showProgress(show) {
+            document.getElementById('progressContainer').style.display = show ? 'block' : 'none';
+        }
+        
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = text;
+        }
+        
+        function showResult(data, file) {
+            const container = document.getElementById('resultContainer');
+            const stats = document.getElementById('resultStats');
+            
+            stats.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${data.length.toLocaleString()}</div>
+                    <div>처리된 레코드</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${(file.size / 1024 / 1024).toFixed(2)}MB</div>
+                    <div>파일 크기</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${Object.keys(data[0] || {}).length}</div>
+                    <div>필드 수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">100%</div>
+                    <div>처리 완료</div>
+                </div>
+            `;
+            
+            container.style.display = 'block';
+            
+            console.log('✅ 처리 완료:', {
+                records: data.length,
+                fields: Object.keys(data[0] || {}).length,
+                size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
+            });
+        }
+        
+        function showMemoryWidget(show) {
+            document.getElementById('memoryWidget').style.display = show ? 'block' : 'none';
+        }
+        
+        // 페이지 로드 완료
+        console.log('🚀 PayPulse 대용량 파일 업로드 시스템 준비 완료');
+    </script>
+</body>
+</html>

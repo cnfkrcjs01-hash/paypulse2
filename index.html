@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PayPulse - AI 인건비 관리 시스템</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="expert_analysis_styles.css">
+    <link rel="stylesheet" href="comprehensive_labor_styles.css">
+    <link rel="stylesheet" href="insurance_rates_styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -25,14 +28,22 @@
             </div>
 
             <div class="menu-section">
+                <div class="menu-title">인건비 관리</div>
+                <div class="menu-item" data-page="comprehensive-labor">
+                    <i class="fas fa-chart-line"></i>
+                    <span>종합 인건비</span>
+                </div>
+                <div class="menu-item" data-page="expert-analysis">
+                    <i class="fas fa-brain"></i>
+                    <span>전문가 분석&예측</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
                 <div class="menu-title">데이터 관리</div>
                 <div class="menu-item" data-page="upload">
                     <i class="fas fa-upload"></i>
-                    <span>급여/상여 대장 업로드</span>
-                </div>
-                <div class="menu-item" data-page="employee">
-                    <i class="fas fa-users"></i>
-                    <span>직원 정보 관리</span>
+                    <span>통합 데이터 업로드</span>
                 </div>
             </div>
 
@@ -44,16 +55,12 @@
                 </div>
                 <div class="menu-item" data-page="calculation">
                     <i class="fas fa-calculator"></i>
-                    <span>인건비 계산</span>
+                    <span>스마트 인건비 계산기</span>
                 </div>
             </div>
 
             <div class="menu-section">
                 <div class="menu-title">퇴직 관리</div>
-                <div class="menu-item" data-page="retirement">
-                    <i class="fas fa-piggy-bank"></i>
-                    <span>퇴직금 계산기</span>
-                </div>
                 <div class="menu-item" data-page="provision">
                     <i class="fas fa-chart-line"></i>
                     <span>퇴직충당금</span>
@@ -157,6 +164,11 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script src="script.js"></script>
+    <script src="expert_analysis.js"></script>
+    <script src="comprehensive_labor.js"></script>
+    <script src="insurance_rates.js"></script>
+    <script src="salary_calculator.js"></script>
 </body>
 </html>
