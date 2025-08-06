@@ -140,67 +140,63 @@ function setupPageSpecificEvents(pageName) {
                 }
             }, 200);
             break;
+        case 'direct-labor':
+            // 직접 인건비 페이지 초기화
+            setTimeout(() => {
+                console.log('💼 직접 인건비 페이지 초기화 시작');
+                if (typeof initializeDirectLabor === 'function') {
+                    initializeDirectLabor();
+                    console.log('✅ 직접 인건비 시스템 초기화 완료');
+                } else {
+                    console.log('direct_labor.js 로드 대기 중...');
+                    const checkDirectLabor = setInterval(() => {
+                        if (typeof initializeDirectLabor === 'function') {
+                            initializeDirectLabor();
+                            console.log('✅ 직접 인건비 시스템 초기화 완료 (지연)');
+                            clearInterval(checkDirectLabor);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
+        case 'indirect-labor':
+            // 간접 인건비 페이지 초기화
+            setTimeout(() => {
+                console.log('🏢 간접 인건비 페이지 초기화 시작');
+                if (typeof initializeIndirectLabor === 'function') {
+                    initializeIndirectLabor();
+                    console.log('✅ 간접 인건비 시스템 초기화 완료');
+                } else {
+                    console.log('indirect_labor.js 로드 대기 중...');
+                    const checkIndirectLabor = setInterval(() => {
+                        if (typeof initializeIndirectLabor === 'function') {
+                            initializeIndirectLabor();
+                            console.log('✅ 간접 인건비 시스템 초기화 완료 (지연)');
+                            clearInterval(checkIndirectLabor);
+                        }
+                    }, 100);
+                }
+            }, 200);
+            break;
         case 'expert-analysis':
             console.log('🔧 전문가 분석&예측 페이지 이벤트 설정 시작');
             
-            // 강제 초기화 함수
-            const forceInitializeExpertAnalysis = () => {
-                console.log('🚀 강제 전문가 분석 초기화 시작');
-                
-                const container = document.getElementById('expert-analysis-content');
-                if (!container) {
-                    console.log('❌ expert-analysis-content 컨테이너를 찾을 수 없음');
-                    return;
-                }
-                
-                // HTML 삽입
-                if (typeof getExpertAnalysisHTML === 'function') {
-                    container.innerHTML = getExpertAnalysisHTML();
-                    console.log('✅ 전문가 분석 HTML 삽입 완료');
-                    
-                    // Chart.js 확인 및 차트 초기화
-                    const waitForChartAndInit = () => {
-                        if (typeof Chart !== 'undefined') {
-                            console.log('✅ Chart.js 확인됨, 차트 초기화 시작');
-                            
-                            // 캔버스 존재 확인
-                            const deptCanvas = document.getElementById('departmentChart');
-                            const roiCanvas = document.getElementById('roiTrendChart');
-                            
-                            if (deptCanvas && roiCanvas) {
-                                console.log('✅ 캔버스 요소들 확인됨');
-                                
-                                // 직접 차트 생성
-                                setTimeout(() => {
-                                    try {
-                                        console.log('📊 부서별 차트 생성 시도');
-                                        createDepartmentChart();
-                                        
-                                        console.log('📈 ROI 차트 생성 시도');
-                                        createROITrendChart();
-                                        
-                                        console.log('🎉 모든 차트 생성 완료!');
-                                    } catch (error) {
-                                        console.error('❌ 차트 생성 중 오류:', error);
-                                    }
-                                }, 500);
-                            } else {
-                                console.log('❌ 캔버스 요소를 찾을 수 없음');
-                                setTimeout(waitForChartAndInit, 200);
-                            }
-                        } else {
-                            console.log('⏳ Chart.js 로딩 대기 중...');
-                            setTimeout(waitForChartAndInit, 200);
-                        }
-                    };
-                    
-                    setTimeout(waitForChartAndInit, 300);
+            setTimeout(() => {
+                console.log('🚀 전문가 분석 초기화 시작');
+                if (typeof initializeExpertAnalysis === 'function') {
+                    initializeExpertAnalysis();
+                    console.log('✅ 전문가 분석 시스템 초기화 완료');
                 } else {
-                    console.log('❌ getExpertAnalysisHTML 함수를 찾을 수 없음');
+                    console.log('expert_analysis.js 로드 대기 중...');
+                    const checkExpertAnalysis = setInterval(() => {
+                        if (typeof initializeExpertAnalysis === 'function') {
+                            initializeExpertAnalysis();
+                            console.log('✅ 전문가 분석 시스템 초기화 완료 (지연)');
+                            clearInterval(checkExpertAnalysis);
+                        }
+                    }, 100);
                 }
-            };
-            
-            setTimeout(forceInitializeExpertAnalysis, 500);
+            }, 200);
             break;
         default:
             console.log('기본 페이지 이벤트 설정');
@@ -273,18 +269,7 @@ function getPageContent(pageName) {
                     </div>
                 `;
             }
-        case 'hc-roi':
-            return `
-    <div class="page-header">
-                    <h2><i class="fas fa-chart-pie"></i> HC ROI 분석</h2>
-                    <p>인적자원 투자수익률을 분석하세요</p>
-    </div>
-                <div class="coming-soon">
-                            <i class="fas fa-chart-pie"></i>
-                    <h3>HC ROI 분석</h3>
-                    <p>HC ROI 분석 기능이 곧 추가됩니다</p>
-                        </div>
-            `;
+
         case 'reports':
             return `
                 <div class="page-header">
@@ -309,6 +294,38 @@ function getPageContent(pageName) {
                     <p>리스크 매트릭스 기능이 곧 추가됩니다</p>
                         </div>
             `;
+        case 'direct-labor':
+            // direct_labor.js에서 HTML을 가져옴
+            if (typeof getDirectLaborHTML === 'function') {
+                return getDirectLaborHTML();
+            } else {
+                return `
+                    <div class="page-header">
+                        <h2><i class="fas fa-users-cog"></i> 직접 인건비 관리</h2>
+                        <p>생산활동에 직접 투입되는 인력 비용 관리</p>
+                    </div>
+                    <div class="loading-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>직접 인건비 시스템을 로드하는 중...</p>
+                    </div>
+                `;
+            }
+        case 'indirect-labor':
+            // indirect_labor.js에서 HTML을 가져옴
+            if (typeof getIndirectLaborHTML === 'function') {
+                return getIndirectLaborHTML();
+            } else {
+                return `
+                    <div class="page-header">
+                        <h2><i class="fas fa-heart"></i> 간접 인건비 관리</h2>
+                        <p>복리후생 및 관리·지원 업무 관련 비용 관리</p>
+                    </div>
+                    <div class="loading-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>간접 인건비 시스템을 로드하는 중...</p>
+                    </div>
+                `;
+            }
         case 'comprehensive-labor':
             return `
                 <div class="page-header">
@@ -338,21 +355,21 @@ function getPageContent(pageName) {
                         </div>
             `;
         case 'expert-analysis':
-            return `
-            <div class="page-header">
-                    <h2><i class="fas fa-brain"></i> 전문가 분석&예측</h2>
-                    <p>AI 기반 고급 인건비 분석 및 예측 시스템</p>
-            </div>
-                <div id="expert-analysis-content">
-                    <!-- 전문가 분석&예측 내용이 여기에 로드됩니다 -->
-                    <div class="expert-analysis-container">
-                        <div class="loading-message">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>전문가 분석&예측 시스템을 로드하는 중...</p>
-                        </div>
-                        </div>
+            // expert_analysis.js에서 HTML을 가져옴
+            if (typeof getExpertAnalysisHTML === 'function') {
+                return getExpertAnalysisHTML();
+            } else {
+                return `
+                    <div class="page-header">
+                        <h2><i class="fas fa-brain"></i> 전문가 분석&예측</h2>
+                        <p>AI 기반 고급 인건비 분석 및 예측 시스템</p>
                     </div>
-            `;
+                    <div class="loading-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>전문가 분석&예측 시스템을 로드하는 중...</p>
+                    </div>
+                `;
+            }
         default:
             return '<p>페이지를 찾을 수 없습니다.</p>';
     }

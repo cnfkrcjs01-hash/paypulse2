@@ -106,7 +106,6 @@ function getAIAnalyticsHTML() {
                             <option value="basic">기본 분석</option>
                             <option value="standard" selected>표준 분석</option>
                             <option value="advanced">고급 분석</option>
-                            <option value="expert">전문가 분석</option>
                         </select>
                     </div>
                     <div class="setting-item">

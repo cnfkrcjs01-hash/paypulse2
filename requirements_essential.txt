@@ -1,0 +1,22 @@
+# PayPulse 필수 패키지 (간단 버전)
+# 기본 웹 서버 및 데이터 처리용
+
+# 웹 프레임워크
+flask==2.3.3
+werkzeug==2.3.7
+
+# 데이터 처리
+pandas==2.0.3
+numpy==1.24.3
+
+# CSV 파일 처리
+chardet==5.2.0
+
+# 기본 HTTP 요청
+requests==2.31.0
+
+# JSON 처리 및 날짜/시간
+python-dateutil==2.8.2
+
+# CORS 처리 (웹 개발용)
+flask-cors==4.0.0
