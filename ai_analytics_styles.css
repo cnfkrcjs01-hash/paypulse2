@@ -1,0 +1,1190 @@
+/* AI 진단 분석 스타일 */
+
+.analytics-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* 헤더 섹션 */
+.analytics-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 3rem;
+    margin-bottom: 3rem;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.analytics-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+
+.header-text h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.header-text p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.analysis-status {
+    text-align: center;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.status-indicator.ready {
+    background: rgba(34, 197, 94, 0.2);
+    border: 2px solid rgba(34, 197, 94, 0.3);
+}
+
+.status-indicator i {
+    font-size: 1.2rem;
+}
+
+/* 빠른 분석 대시보드 */
+.quick-analytics-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.dashboard-card:hover::before {
+    transform: scaleX(1);
+}
+
+.card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: white;
+}
+
+.card-icon.health { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+.card-icon.anomaly { background: linear-gradient(135deg, #ffa500, #ff6347); }
+.card-icon.trend { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+.card-icon.benchmark { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+.card-content h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.card-content p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.card-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* 분석 결과 영역 */
+.analysis-results {
+    margin-bottom: 3rem;
+}
+
+.analysis-progress {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.progress-animation {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.progress-circle {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 2rem;
+    position: relative;
+}
+
+.progress-spinner {
+    width: 100%;
+    height: 100%;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.step {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    background: #f3f4f6;
+    color: #6b7280;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.step.active {
+    background: #667eea;
+    color: white;
+}
+
+/* 분석 결과 컨테이너 */
+.analysis-result-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.result-header {
+    background: #f8fafc;
+    padding: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.result-header h3 {
+    font-size: 1.5rem;
+    color: #1f2937;
+}
+
+.result-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.result-content {
+    padding: 2rem;
+}
+
+/* 조직 건강도 스타일 */
+.health-check-results {
+    display: grid;
+    gap: 2rem;
+}
+
+.health-score-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2rem;
+    padding: 2rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.score-display {
+    text-align: center;
+}
+
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(#22c55e 0deg 306deg, #e5e7eb 306deg 360deg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.score-circle::before {
+    content: '';
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: white;
+    border-radius: 50%;
+}
+
+.score-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    z-index: 2;
+}
+
+.score-label {
+    font-size: 0.9rem;
+    color: #6b7280;
+    z-index: 2;
+}
+
+.score-status.excellent {
+    background: #dcfce7;
+    color: #166534;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.score-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.metric {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.metric-label {
+    font-weight: 600;
+    color: #374151;
+}
+
+.metric-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.metric-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    transition: width 0.5s ease;
+}
+
+.metric-value {
+    font-weight: 600;
+    color: #22c55e;
+}
+
+/* 인사이트 카드 */
+.health-insights {
+    margin-top: 2rem;
+}
+
+.insight-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.insight-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.insight-card.positive {
+    background: #ecfdf5;
+    border-color: #22c55e;
+}
+
+.insight-card.warning {
+    background: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.insight-card h5 {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.insight-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.insight-card li {
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.insight-card li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: inherit;
+}
+
+/* 추천 액션 */
+.recommendations {
+    margin-top: 2rem;
+}
+
+.action-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: white;
+}
+
+.priority {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    align-self: flex-start;
+}
+
+.priority.high {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.priority.medium {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.priority.low {
+    background: #dbeafe;
+    color: #2563eb;
+}
+
+.action-content h5 {
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.action-content p {
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* 이상 데이터 탐지 스타일 */
+.anomaly-summary {
+    margin-bottom: 2rem;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid;
+}
+
+.stat-card.critical {
+    background: #fef2f2;
+    border-color: #dc2626;
+    color: #dc2626;
+}
+
+.stat-card.warning {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    color: #f59e0b;
+}
+
+.stat-card.normal {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+/* 이상 패턴 목록 */
+.anomaly-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.anomaly-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: white;
+}
+
+.anomaly-item.critical {
+    border-left: 4px solid #dc2626;
+}
+
+.anomaly-item.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.anomaly-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.anomaly-item.critical .anomaly-icon {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.anomaly-item.warning .anomaly-icon {
+    background: #fffbeb;
+    color: #f59e0b;
+}
+
+.anomaly-info h5 {
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.anomaly-info p {
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.anomaly-details-text {
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    color: #374151;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-small:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+/* 인사이트 히스토리 */
+.insights-history {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 3rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.section-header h3 {
+    font-size: 1.4rem;
+    color: #1f2937;
+}
+
+.insights-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.insight-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+}
+
+.insight-item:hover {
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.insight-item.warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.insight-item.success {
+    border-left: 4px solid #22c55e;
+}
+
+.insight-item.info {
+    border-left: 4px solid #3b82f6;
+}
+
+.insight-item.trend {
+    border-left: 4px solid #8b5cf6;
+}
+
+.insight-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    background: white;
+    border: 1px solid #e5e7eb;
+}
+
+.insight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.insight-header h4 {
+    color: #1f2937;
+    font-size: 1.1rem;
+}
+
+.insight-time {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.insight-content p {
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.insight-action {
+    background: none;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.insight-action:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* 분석 설정 */
+.analysis-settings {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.analysis-settings h3 {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    color: #1f2937;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.setting-item select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    font-size: 1rem;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    margin-bottom: 0;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+}
+
+/* 트렌드 차트 */
+.trend-summary {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.trend-chart-container {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    height: 400px; /* 고정 높이 설정 */
+    position: relative;
+}
+
+.trend-chart-container h4 {
+    margin-bottom: 1rem;
+    color: #1f2937;
+}
+
+.trend-chart-container canvas {
+    max-width: 100%;
+    max-height: 300px; /* 차트 최대 높이 제한 */
+}
+
+.trend-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.metric-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+}
+
+.metric-card.growth {
+    background: #ecfdf5;
+    border-color: #22c55e;
+}
+
+.metric-card.forecast {
+    background: #eff6ff;
+    border-color: #3b82f6;
+}
+
+.metric-card h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.metric-card p {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.metric-card small {
+    color: #6b7280;
+}
+
+/* 예측 타임라인 */
+.insight-timeline {
+    margin-top: 1rem;
+}
+
+.timeline-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 50px;
+    top: 60px;
+    bottom: -20px;
+    width: 2px;
+    background: #e5e7eb;
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-date {
+    background: #667eea;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    align-self: flex-start;
+    width: 100px;
+}
+
+.timeline-content {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.timeline-content h5 {
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.timeline-content p {
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* 시나리오 분석 */
+.scenario-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.scenario-tab {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid #d1d5db;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.scenario-tab.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.scenario {
+    display: none;
+}
+
+.scenario.active {
+    display: block;
+}
+
+.scenario-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.scenario-stats .stat {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.scenario-stats h5 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.scenario-stats p {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.scenario-assumptions h6 {
+    margin-bottom: 1rem;
+    color: #1f2937;
+}
+
+.scenario-assumptions ul {
+    list-style: none;
+    padding: 0;
+}
+
+.scenario-assumptions li {
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+    position: relative;
+    color: #6b7280;
+}
+
+.scenario-assumptions li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* 벤치마킹 결과 */
+.benchmark-overview {
+    margin-bottom: 2rem;
+}
+
+.company-position {
+    background: #f8fafc;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.position-indicator {
+    margin: 1.5rem 0;
+}
+
+.position-bar {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(90deg, #ef4444 0%, #f59e0b 25%, #eab308 50%, #22c55e 75%, #16a34a 100%);
+    border-radius: 20px;
+    margin: 2rem 0;
+}
+
+.position-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.position-fill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    transition: width 0.5s ease;
+}
+
+.position-current {
+    position: absolute;
+    top: -10px;
+    transform: translateX(-50%);
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+}
+
+.position-current i {
+    color: #667eea;
+}
+
+.position-description {
+    text-align: center;
+    color: #374151;
+    font-size: 1.1rem;
+}
+
+/* 비교 테이블 */
+.comparison-table {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.comparison-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.comparison-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #374151;
+}
+
+.comparison-table tr.excellent {
+    background: #ecfdf5;
+}
+
+.comparison-table tr.good {
+    background: #f0fdf4;
+}
+
+.comparison-table tr.average {
+    background: #fffbeb;
+}
+
+.comparison-table tr.poor {
+    background: #fef2f2;
+}
+
+.positive {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.negative {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge.excellent {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge.good {
+    background: #d1fae5;
+    color: #166534;
+}
+
+.badge.average {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge.poor {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .analytics-container {
+        padding: 1rem;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 2rem;
+    }
+    
+    .quick-analytics-dashboard {
+        grid-template-columns: 1fr;
+    }
+    
+    .insight-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .trend-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .trend-chart-container {
+        height: 300px; /* 모바일에서 더 작은 높이 */
+    }
+    
+    .trend-chart-container canvas {
+        max-height: 220px; /* 모바일 차트 높이 조정 */
+    }
+    
+    .comparison-table {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .trend-chart-container {
+        height: 250px; /* 작은 화면에서 더 작게 */
+        padding: 1rem;
+    }
+    
+    .trend-chart-container canvas {
+        max-height: 180px;
+    }
+    
+    .trend-chart-container h4 {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* 버튼 스타일 */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn.btn-outline {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.btn.btn-outline:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn.btn-secondary:hover {
+    background: #4b5563;
+}
+
+/* 빈 상태 */
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse - AI 인건비 관리 시스템</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <div class="sidebar">
+            <div class="logo">
+                <h2>💼 PayPulse</h2>
+                <p>AI 인건비 관리</p>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-section">
+                    <h3>📊 대시보드</h3>
+                    <a href="#" class="nav-item active" data-page="dashboard">
+                        <span class="nav-icon">🏠</span>
+                        홈 대시보드
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>📁 데이터 관리</h3>
+                    <a href="#" class="nav-item" data-page="upload">
+                        <span class="nav-icon">📤</span>
+                        파일 업로드
+                    </a>
+                    <a href="#" class="nav-item" data-page="payroll-system">
+                        <span class="nav-icon">💼</span>
+                        급여 시스템
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <h3>🤖 인공지능</h3>
+                    <a href="#" class="nav-item" data-page="ai-chat">
+                        <span class="nav-icon">💬</span>
+                        AI 상담
+                    </a>
+                </div>
+            </nav>
+        </div>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="main-content">
+            <div class="header">
+                <h1>PayPulse 대시보드</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary">
+                        📊 분석 보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 페이지 콘텐츠 -->
+            <div id="page-content">
+                <div class="welcome-section">
+                    <h2>🎉 PayPulse에 오신 것을 환영합니다!</h2>
+                    <p>AI 기반 인건비 관리 시스템이 정상적으로 로드되었습니다.</p>
+                    
+                    <div class="feature-cards">
+                        <div class="card">
+                            <h3>📤 파일 업로드</h3>
+                            <p>급여 데이터를 업로드하여 분석을 시작하세요.</p>
+                            <button class="btn btn-primary" onclick="showUploadPage()">업로드 시작</button>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>📊 데이터 분석</h3>
+                            <p>AI가 자동으로 급여 데이터를 분석합니다.</p>
+                            <button class="btn btn-secondary" onclick="showAnalysisPage()">분석 보기</button>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>💬 AI 상담</h3>
+                            <p>궁금한 점을 AI에게 물어보세요.</p>
+                            <button class="btn btn-secondary" onclick="showChatPage()">AI 상담</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 최소한의 JavaScript만 포함 -->
+    <script>
+        console.log('✅ PayPulse 기본 시스템 로드 완료');
+        
+        // 간단한 네비게이션
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM 로드 완료');
+            
+            // 네비게이션 클릭 이벤트
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // 활성 상태 변경
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const page = this.getAttribute('data-page');
+                    console.log('페이지 변경:', page);
+                    
+                    // 간단한 페이지 내용 변경
+                    const content = document.getElementById('page-content');
+                    content.innerHTML = `
+                        <div class="welcome-section">
+                            <h2>📄 ${page} 페이지</h2>
+                            <p>이 페이지는 현재 개발 중입니다.</p>
+                            <button onclick="location.reload()" class="btn btn-primary">
+                                🔄 새로고침
+                            </button>
+                        </div>
+                    `;
+                });
+            });
+            
+            // 페이지 함수들
+            window.showUploadPage = function() {
+                const content = document.getElementById('page-content');
+                content.innerHTML = `
+                    <div class="upload-section">
+                        <h2>📤 파일 업로드</h2>
+                        <div class="upload-area">
+                            <p>JSON 파일을 선택하여 업로드하세요.</p>
+                            <input type="file" id="fileInput" accept=".json" style="margin: 20px 0;">
+                            <br>
+                            <button class="btn btn-primary" onclick="handleFileUpload()">업로드</button>
+                            <button class="btn btn-secondary" onclick="downloadSample()">샘플 다운로드</button>
+                        </div>
+                        <div id="uploadResult"></div>
+                    </div>
+                `;
+            };
+            
+            window.showAnalysisPage = function() {
+                const content = document.getElementById('page-content');
+                content.innerHTML = `
+                    <div class="analysis-section">
+                        <h2>📊 데이터 분석</h2>
+                        <p>업로드된 데이터를 분석합니다.</p>
+                        <div id="analysisResult">
+                            <p>분석할 데이터가 없습니다. 먼저 파일을 업로드해주세요.</p>
+                        </div>
+                    </div>
+                `;
+            };
+            
+            window.showChatPage = function() {
+                const content = document.getElementById('page-content');
+                content.innerHTML = `
+                    <div class="chat-section">
+                        <h2>💬 AI 상담</h2>
+                        <p>AI 상담 기능은 현재 개발 중입니다.</p>
+                    </div>
+                `;
+            };
+            
+            window.handleFileUpload = function() {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                const result = document.getElementById('uploadResult');
+                
+                if (!file) {
+                    result.innerHTML = '<p style="color: red;">파일을 선택해주세요.</p>';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        result.innerHTML = \`
+                            <div style="color: green; margin-top: 20px;">
+                                <h3>✅ 업로드 성공!</h3>
+                                <p>파일명: \${file.name}</p>
+                                <p>데이터 개수: \${Array.isArray(data) ? data.length : 1}개</p>
+                            </div>
+                        \`;
+                        console.log('업로드된 데이터:', data);
+                    } catch (error) {
+                        result.innerHTML = \`
+                            <div style="color: red; margin-top: 20px;">
+                                <h3>❌ 업로드 실패</h3>
+                                <p>JSON 형식이 올바르지 않습니다.</p>
+                                <p>오류: \${error.message}</p>
+                            </div>
+                        \`;
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            window.downloadSample = function() {
+                const sampleData = [
+                    {
+                        "급여일_급여유형": "2024.01.25 급여_정기급여",
+                        "급여영역": "(주)샘플회사",
+                        "사번": "E2024001",
+                        "성명": "홍길동",
+                        "입사일": 20240101,
+                        "성별": "남",
+                        "조직": "인사팀",
+                        "직책": "팀원",
+                        "직급": "대리",
+                        "기본급": 3000000,
+                        "실지급액": 2800000,
+                        "연도": 2024
+                    }
+                ];
+                
+                const blob = new Blob([JSON.stringify(sampleData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'payroll_sample.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+        });
+    </script>
+</body>
+</html>

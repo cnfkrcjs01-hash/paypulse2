@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>디버그 업로드 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .upload-box {
+            background: white;
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .result {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 JSON 업로드 디버그 테스트</h1>
+    
+    <div class="upload-box">
+        <h3>📁 파일 업로드 테스트</h3>
+        <input type="file" id="fileInput" accept=".json" style="display: none;">
+        <button class="btn" onclick="document.getElementById('fileInput').click()">
+            📄 JSON 파일 선택
+        </button>
+    </div>
+    
+    <div id="result" style="display: none;"></div>
+    
+    <script>
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('🔍 파일 정보:', {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                lastModified: new Date(file.lastModified)
+            });
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                
+                try {
+                    let content = e.target.result;
+                    console.log('📖 원본 파일 내용 (처음 500자):', content.substring(0, 500));
+                    
+                    // 단계별 정리 과정
+                    console.log('🔧 1단계: BOM 제거');
+                    content = content.replace(/^\uFEFF/, '');
+                    
+                    console.log('🔧 2단계: 특수값 처리');
+                    content = content.replace(/:\s*NaN/g, ': null');
+                    content = content.replace(/:\s*undefined/g, ': null');
+                    content = content.replace(/:\s*Infinity/g, ': null');
+                    content = content.replace(/:\s*-Infinity/g, ': null');
+                    
+                    console.log('🔧 3단계: 구문 정리');
+                    content = content.replace(/,(\s*[}\]])/g, '$1');
+                    content = content.replace(/'/g, '"');
+                    
+                    console.log('📋 정리된 내용 (처음 500자):', content.substring(0, 500));
+                    
+                    console.log('🔧 4단계: JSON 파싱 시도');
+                    const data = JSON.parse(content);
+                    
+                    console.log('✅ JSON 파싱 성공!');
+                    console.log('📊 데이터 타입:', typeof data);
+                    console.log('📊 배열 여부:', Array.isArray(data));
+                    console.log('📊 데이터 길이:', data.length);
+                    console.log('📊 첫 번째 항목:', data[0]);
+                    console.log('📊 사용 가능한 필드:', Object.keys(data[0] || {}));
+                    
+                    // 성공 결과 표시
+                    resultDiv.className = 'result';
+                    resultDiv.innerHTML = `
+                        <h3>✅ 업로드 성공!</h3>
+                        <p><strong>파일명:</strong> ${file.name}</p>
+                        <p><strong>레코드 수:</strong> ${data.length}개</p>
+                        <p><strong>필드 목록:</strong> ${Object.keys(data[0] || {}).join(', ')}</p>
+                        <h4>📋 첫 번째 레코드:</h4>
+                        <pre>${JSON.stringify(data[0], null, 2)}</pre>
+                        <h4>📋 전체 데이터 (처음 3개):</h4>
+                        <pre>${JSON.stringify(data.slice(0, 3), null, 2)}</pre>
+                    `;
+                    
+                } catch (error) {
+                    console.error('❌ 오류 발생:', error);
+                    console.error('❌ 오류 스택:', error.stack);
+                    
+                    // 오류 결과 표시
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ 업로드 실패</h3>
+                        <p><strong>오류 타입:</strong> ${error.constructor.name}</p>
+                        <p><strong>오류 메시지:</strong> ${error.message}</p>
+                        <h4>🔍 파일 내용 분석:</h4>
+                        <pre>${content.substring(0, 1000)}...</pre>
+                    `;
+                }
+            };
+            
+            reader.onerror = function() {
+                console.error('❌ 파일 읽기 실패');
+                const resultDiv = document.getElementById('result');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = '<h3>❌ 파일 읽기 실패</h3>';
+            };
+            
+            reader.readAsText(file, 'utf-8');
+        });
+    </script>
+</body>
+</html>

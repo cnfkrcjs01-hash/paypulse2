@@ -152,6 +152,14 @@
     font-weight: 600;
 }
 
+.chart-container canvas {
+    width: 100% !important;
+    height: 300px !important;
+    max-width: 400px;
+    margin: 0 auto;
+    display: block;
+}
+
 /* 세부내역 섹션 */
 .breakdown-section {
     margin-top: 3rem;

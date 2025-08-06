@@ -58,12 +58,12 @@ function setupPageSpecificEvents(pageName) {
             break;
         case 'insurance':
             // 4대보험 요율 페이지 초기화
-            setTimeout(() => {
+        setTimeout(() => {
                 console.log('4대보험 요율 페이지 초기화 시작');
                 if (typeof initializeInsuranceRates === 'function') {
                     initializeInsuranceRates();
                     console.log('4대보험 요율 차트 초기화 완료');
-                } else {
+            } else {
                     console.log('insurance_rates.js 로드 대기 중...');
                     // insurance_rates.js 로드 완료 대기
                     const checkInsuranceRates = setInterval(() => {
@@ -83,7 +83,7 @@ function setupPageSpecificEvents(pageName) {
                 if (typeof initializeSalaryCalculator === 'function') {
                     initializeSalaryCalculator();
                     console.log('스마트 인건비 계산기 초기화 완료');
-                } else {
+        } else {
                     console.log('salary_calculator.js 로드 대기 중...');
                     // salary_calculator.js 로드 완료 대기
                     const checkSalaryCalculator = setInterval(() => {
@@ -110,13 +110,13 @@ function setupPageSpecificEvents(pageName) {
                         
                         // 종합 인건비 차트 초기화
                         if (typeof initializeComprehensiveLabor === 'function') {
-                            setTimeout(() => {
+            setTimeout(() => {
                                 initializeComprehensiveLabor();
                                 console.log('종합 인건비 시스템 초기화 완료');
                             }, 100);
                         }
-                    }
-                } else {
+                }
+            } else {
                     console.log('comprehensive_labor.js 로드 대기 중...');
                     // comprehensive_labor.js 로드 완료 대기
                     const checkComprehensiveLabor = setInterval(() => {
@@ -128,7 +128,7 @@ function setupPageSpecificEvents(pageName) {
                                 
                                 // 종합 인건비 차트 초기화
                                 if (typeof initializeComprehensiveLabor === 'function') {
-                                    setTimeout(() => {
+            setTimeout(() => {
                                         initializeComprehensiveLabor();
                                         console.log('종합 인건비 시스템 초기화 완료 (지연)');
                                     }, 100);
@@ -141,48 +141,66 @@ function setupPageSpecificEvents(pageName) {
             }, 200);
             break;
         case 'expert-analysis':
-            // 전문가 분석&예측 페이지 - 기존 React 변환 시스템 초기화
-            setTimeout(() => {
-                console.log('전문가 분석&예측 페이지 초기화 시작');
+            console.log('🔧 전문가 분석&예측 페이지 이벤트 설정 시작');
+            
+            // 강제 초기화 함수
+            const forceInitializeExpertAnalysis = () => {
+                console.log('🚀 강제 전문가 분석 초기화 시작');
                 
-                // expert_analysis.js의 HTML 가져오기
-                if (typeof getExpertAnalysisHTML === 'function') {
-                    const container = document.getElementById('expert-analysis-content');
-                    if (container) {
-                        container.innerHTML = getExpertAnalysisHTML();
-                        console.log('전문가 분석&예측 HTML 삽입 완료');
-                        
-                        // 차트 초기화
-                        if (typeof initializeDashboardCharts === 'function') {
-                            setTimeout(() => {
-                                initializeDashboardCharts();
-                                console.log('전문가 분석&예측 차트 초기화 완료');
-                            }, 100);
-                        }
-                    }
-                } else {
-                    console.log('expert_analysis.js 로드 대기 중...');
-                    // expert_analysis.js 로드 완료 대기
-                    const checkExpertAnalysis = setInterval(() => {
-                        if (typeof getExpertAnalysisHTML === 'function') {
-                            const container = document.getElementById('expert-analysis-content');
-                            if (container) {
-                                container.innerHTML = getExpertAnalysisHTML();
-                                console.log('전문가 분석&예측 HTML 삽입 완료 (지연)');
-                                
-                                // 차트 초기화
-                                if (typeof initializeDashboardCharts === 'function') {
-                                    setTimeout(() => {
-                                        initializeDashboardCharts();
-                                        console.log('전문가 분석&예측 차트 초기화 완료 (지연)');
-                                    }, 100);
-                                }
-                            }
-                            clearInterval(checkExpertAnalysis);
-                        }
-                    }, 100);
+                const container = document.getElementById('expert-analysis-content');
+                if (!container) {
+                    console.log('❌ expert-analysis-content 컨테이너를 찾을 수 없음');
+                    return;
                 }
-            }, 200);
+                
+                // HTML 삽입
+                if (typeof getExpertAnalysisHTML === 'function') {
+                    container.innerHTML = getExpertAnalysisHTML();
+                    console.log('✅ 전문가 분석 HTML 삽입 완료');
+                    
+                    // Chart.js 확인 및 차트 초기화
+                    const waitForChartAndInit = () => {
+                        if (typeof Chart !== 'undefined') {
+                            console.log('✅ Chart.js 확인됨, 차트 초기화 시작');
+                            
+                            // 캔버스 존재 확인
+                            const deptCanvas = document.getElementById('departmentChart');
+                            const roiCanvas = document.getElementById('roiTrendChart');
+                            
+                            if (deptCanvas && roiCanvas) {
+                                console.log('✅ 캔버스 요소들 확인됨');
+                                
+                                // 직접 차트 생성
+                                setTimeout(() => {
+                                    try {
+                                        console.log('📊 부서별 차트 생성 시도');
+                                        createDepartmentChart();
+                                        
+                                        console.log('📈 ROI 차트 생성 시도');
+                                        createROITrendChart();
+                                        
+                                        console.log('🎉 모든 차트 생성 완료!');
+                                    } catch (error) {
+                                        console.error('❌ 차트 생성 중 오류:', error);
+                                    }
+                                }, 500);
+                            } else {
+                                console.log('❌ 캔버스 요소를 찾을 수 없음');
+                                setTimeout(waitForChartAndInit, 200);
+                            }
+                        } else {
+                            console.log('⏳ Chart.js 로딩 대기 중...');
+                            setTimeout(waitForChartAndInit, 200);
+                        }
+                    };
+                    
+                    setTimeout(waitForChartAndInit, 300);
+                } else {
+                    console.log('❌ getExpertAnalysisHTML 함수를 찾을 수 없음');
+                }
+            };
+            
+            setTimeout(forceInitializeExpertAnalysis, 500);
             break;
         default:
             console.log('기본 페이지 이벤트 설정');
@@ -199,16 +217,16 @@ function getPageContent(pageName) {
             // insurance_rates.js에서 HTML을 가져옴
             if (typeof getInsuranceRatesHTML === 'function') {
                 return getInsuranceRatesHTML();
-            } else {
+    } else {
                 return `
-                    <div class="page-header">
+            <div class="page-header">
                         <h2><i class="fas fa-shield-alt"></i> 4대 보험 요율</h2>
                         <p>4대보험 요율 시스템을 로드하는 중...</p>
-                    </div>
+            </div>
                     <div class="loading-message">
                         <i class="fas fa-spinner fa-spin"></i>
                         <p>4대보험 요율 차트를 로드하는 중...</p>
-                    </div>
+                        </div>
                 `;
             }
         case 'calculation':
@@ -216,10 +234,10 @@ function getPageContent(pageName) {
 
         case 'provision':
             return `
-                <div class="page-header">
+            <div class="page-header">
                     <h2><i class="fas fa-chart-line"></i> 퇴직충당금</h2>
                     <p>퇴직충당금을 관리하고 분석하세요</p>
-                </div>
+            </div>
                 <div class="coming-soon">
                     <i class="fas fa-chart-line"></i>
                     <h3>퇴직충당금</h3>
@@ -228,98 +246,103 @@ function getPageContent(pageName) {
             `;
         case 'ai-chat':
             return `
-                <div class="page-header">
-                    <h2><i class="fas fa-robot"></i> AI 어시스턴트</h2>
+    <div class="page-header">
+        <h2><i class="fas fa-robot"></i> AI 어시스턴트</h2>
                     <p>AI와 대화하며 인건비 관련 질문을 해보세요</p>
-                </div>
+    </div>
                 <div class="coming-soon">
                     <i class="fas fa-robot"></i>
                     <h3>AI 어시스턴트</h3>
                     <p>AI 채팅 기능이 곧 추가됩니다</p>
-                </div>
+            </div>
             `;
         case 'analytics':
-            return `
-                <div class="page-header">
-                    <h2><i class="fas fa-brain"></i> AI 진단 분석</h2>
-                    <p>AI 기반 데이터 진단 및 분석을 수행하세요</p>
-                </div>
-                <div class="coming-soon">
-                    <i class="fas fa-brain"></i>
-                    <h3>AI 진단 분석</h3>
-                    <p>AI 진단 분석 기능이 곧 추가됩니다</p>
-                </div>
-            `;
+            // ai_analytics.js에서 HTML을 가져옴
+            if (typeof getAIAnalyticsHTML === 'function') {
+                return getAIAnalyticsHTML();
+            } else {
+                return `
+                    <div class="page-header">
+                        <h2><i class="fas fa-brain"></i> AI 진단 분석</h2>
+                        <p>AI 기반 데이터 진단 및 분석을 수행하세요</p>
+                    </div>
+                    <div class="coming-soon">
+                        <i class="fas fa-brain"></i>
+                        <h3>AI 진단 분석</h3>
+                        <p>AI 진단 분석 기능을 로드하는 중...</p>
+                    </div>
+                `;
+            }
         case 'hc-roi':
             return `
-                <div class="page-header">
+    <div class="page-header">
                     <h2><i class="fas fa-chart-pie"></i> HC ROI 분석</h2>
                     <p>인적자원 투자수익률을 분석하세요</p>
-                </div>
+    </div>
                 <div class="coming-soon">
-                    <i class="fas fa-chart-pie"></i>
+                            <i class="fas fa-chart-pie"></i>
                     <h3>HC ROI 분석</h3>
                     <p>HC ROI 분석 기능이 곧 추가됩니다</p>
-                </div>
+                        </div>
             `;
         case 'reports':
             return `
                 <div class="page-header">
                     <h2><i class="fas fa-file-alt"></i> 급여명세서</h2>
                     <p>급여명세서를 생성하고 관리하세요</p>
-                </div>
+                        </div>
                 <div class="coming-soon">
                     <i class="fas fa-file-alt"></i>
                     <h3>급여명세서</h3>
                     <p>급여명세서 생성 기능이 곧 추가됩니다</p>
-                </div>
+                    </div>
             `;
         case 'risk-matrix':
             return `
-                <div class="page-header">
+            <div class="page-header">
                     <h2><i class="fas fa-exclamation-triangle"></i> 리스크 매트릭스</h2>
                     <p>인건비 관련 리스크를 분석하세요</p>
-                </div>
+            </div>
                 <div class="coming-soon">
-                    <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-exclamation-triangle"></i>
                     <h3>리스크 매트릭스</h3>
                     <p>리스크 매트릭스 기능이 곧 추가됩니다</p>
-                </div>
+                        </div>
             `;
         case 'comprehensive-labor':
             return `
                 <div class="page-header">
                     <h2><i class="fas fa-chart-line"></i> 종합 인건비 관리</h2>
                     <p>AI 기반 전문가 수준의 인건비 분석 및 예측</p>
-                </div>
+                        </div>
                 <div id="comprehensive-labor-content">
                     <!-- 전문가 분석&예측 내용이 여기에 로드됩니다 -->
                     <div class="expert-analysis-container">
                         <div class="loading-message">
                             <i class="fas fa-spinner fa-spin"></i>
                             <p>전문가 분석 시스템을 로드하는 중...</p>
-                        </div>
                     </div>
-                </div>
+                        </div>
+                        </div>
             `;
         case 'upload':
             return `
-                <div class="page-header">
+            <div class="page-header">
                     <h2><i class="fas fa-upload"></i> 통합 데이터 업로드</h2>
                     <p>다양한 형식의 데이터를 업로드하세요</p>
-                </div>
+            </div>
                 <div class="coming-soon">
                     <i class="fas fa-upload"></i>
                     <h3>통합 데이터 업로드</h3>
                     <p>통합 데이터 업로드 기능이 곧 추가됩니다</p>
-                </div>
+                        </div>
             `;
         case 'expert-analysis':
             return `
-                <div class="page-header">
+            <div class="page-header">
                     <h2><i class="fas fa-brain"></i> 전문가 분석&예측</h2>
                     <p>AI 기반 고급 인건비 분석 및 예측 시스템</p>
-                </div>
+            </div>
                 <div id="expert-analysis-content">
                     <!-- 전문가 분석&예측 내용이 여기에 로드됩니다 -->
                     <div class="expert-analysis-container">
@@ -327,8 +350,8 @@ function getPageContent(pageName) {
                             <i class="fas fa-spinner fa-spin"></i>
                             <p>전문가 분석&예측 시스템을 로드하는 중...</p>
                         </div>
+                        </div>
                     </div>
-                </div>
             `;
         default:
             return '<p>페이지를 찾을 수 없습니다.</p>';
@@ -345,34 +368,34 @@ function getSmartSalaryCalculatorHTML() {
                     <i class="fas fa-calculator" style="color: #6366f1; margin-right: 0.5rem;"></i>스마트 인건비 계산기
                 </h1>
                 <p style="font-size: 1.1rem; color: #6b7280; margin: 0; font-weight: 400;">다양한 수당과 급여를 정확하게 계산하는 올인원 계산기</p>
-            </div>
-
+                    </div>
+                    
             <!-- 계산기 탭 네비게이션 (네오모피즘) -->
             <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; background: #e0e7ff; padding: 1.5rem; border-radius: 16px; box-shadow: inset 8px 8px 16px #c7d2fe, inset -8px -8px 16px #f9fafb; justify-content: center;">
                 <div class="calc-tab active" data-tab="salary" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 600; color: #6366f1; background: #e0e7ff; box-shadow: 8px 8px 16px #c7d2fe, -8px -8px 16px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-wallet" style="margin-right: 0.5rem;"></i>직원급여
-                </div>
+                        </div>
                 <div class="calc-tab" data-tab="annual-leave" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i>연차수당
-                </div>
+                        </div>
                 <div class="calc-tab" data-tab="overtime" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-clock" style="margin-right: 0.5rem;"></i>연장근로수당
-                </div>
+                    </div>
                 <div class="calc-tab" data-tab="parental-leave" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-baby" style="margin-right: 0.5rem;"></i>육아휴직급여
                 </div>
                 <div class="calc-tab" data-tab="reduced-hours" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-user-clock" style="margin-right: 0.5rem;"></i>단축근로
-                </div>
+                        </div>
                 <div class="calc-tab" data-tab="holiday-work" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-calendar-check" style="margin-right: 0.5rem;"></i>휴일근로
-                </div>
+                        </div>
                 <div class="calc-tab" data-tab="retirement" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-piggy-bank" style="margin-right: 0.5rem;"></i>퇴직금(DB/DC)
-                </div>
+                        </div>
                 <div class="calc-tab" data-tab="insurance" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-shield-alt" style="margin-right: 0.5rem;"></i>4대보험료
-                </div>
+                    </div>
                 <div class="calc-tab" data-tab="minimum-wage" style="padding: 1rem 1.5rem; border-radius: 12px; cursor: pointer; font-weight: 500; color: #6b7280; background: #e0e7ff; box-shadow: inset 4px 4px 8px #c7d2fe, inset -4px -4px 8px #f9fafb; transition: all 0.3s ease;">
                     <i class="fas fa-balance-scale" style="margin-right: 0.5rem;"></i>최저임금검증
                 </div>
@@ -381,7 +404,7 @@ function getSmartSalaryCalculatorHTML() {
             <!-- 계산기 컨텐츠 영역 (네오모피즘) -->
             <div id="calculator-content" style="margin-bottom: 2rem;">
                 <!-- 각 계산기가 동적으로 로드됩니다 -->
-            </div>
+                </div>
 
             <!-- 계산 결과 영역 (네오모피즘) -->
             <div id="calculation-results" style="display: none; background: #e0e7ff; border-radius: 16px; padding: 2rem; box-shadow: 20px 20px 40px #c7d2fe, -20px -20px 40px #f9fafb;">
@@ -391,13 +414,13 @@ function getSmartSalaryCalculatorHTML() {
                     </h3>
                     <button onclick="exportCalculationResult()" style="background: #e0e7ff; color: #6366f1; border: none; padding: 0.75rem 1.25rem; border-radius: 12px; cursor: pointer; font-size: 0.9rem; font-weight: 600; box-shadow: 8px 8px 16px #c7d2fe, -8px -8px 16px #f9fafb; transition: all 0.3s ease;">
                         <i class="fas fa-copy" style="margin-right: 0.3rem;"></i>결과 복사
-                    </button>
-                </div>
+                            </button>
+                        </div>
                 <div id="result-content" style="background: #e0e7ff; border-radius: 12px; padding: 1.5rem; box-shadow: inset 8px 8px 16px #c7d2fe, inset -8px -8px 16px #f9fafb;">
                     <!-- 계산 결과가 여기에 표시됩니다 -->
-                </div>
-            </div>
-            
+                            </div>
+                        </div>
+                        
             <!-- 네오모피즘 스타일 적용을 위한 CSS -->
             <style>
                 .calc-tab.active {
@@ -423,7 +446,7 @@ function setupMenuEvents() {
         item.addEventListener('click', function() {
             const pageName = this.getAttribute('data-page');
             if (pageName) {
-                switchPage(pageName);
+            switchPage(pageName);
             }
         });
     });
@@ -466,9 +489,9 @@ function handleFileUpload(event) {
         } else {
             console.log('지원하지 않는 파일 형식:', fileExtension);
             alert(`지원하지 않는 파일 형식입니다: ${file.name}\n지원 형식: JSON, TXT, CSV, XLSX`);
-        }
-    });
-}
+            }
+        });
+    }
 
 // 파일 처리 함수 개선
 function processFile(file, extension) {
@@ -481,8 +504,8 @@ function processFile(file, extension) {
         const data = e.target.result;
         
         try {
-            switch (extension) {
-                case 'json':
+    switch (extension) {
+        case 'json':
                 case 'txt': // .json.txt 파일도 JSON으로 처리
                     console.log('JSON 데이터 파싱 시작');
                     const jsonData = JSON.parse(data);
@@ -493,15 +516,15 @@ function processFile(file, extension) {
                     console.log('CSV 데이터 처리 시작');
                     processCsvData(data, file.name);
                     break;
-                case 'xlsx':
+        case 'xlsx':
                     console.log('Excel 파일 처리 시작');
                     processExcelData(data, file.name);
                     break;
-                default:
+        default:
                     console.log('알 수 없는 파일 형식:', extension);
                     alert('알 수 없는 파일 형식입니다.');
             }
-        } catch (error) {
+            } catch (error) {
             console.error('파일 처리 중 오류:', error);
             alert(`파일 처리 중 오류가 발생했습니다: ${file.name}\n오류: ${error.message}`);
         }
@@ -515,7 +538,7 @@ function processFile(file, extension) {
     // 파일 읽기 시작
     if (extension === 'xlsx') {
         reader.readAsArrayBuffer(file);
-    } else {
+                        } else {
         reader.readAsText(file, 'UTF-8');
     }
 }
@@ -636,7 +659,7 @@ function getUploadPageContent() {
         <div class="page-header">
             <h2><i class="fas fa-upload"></i> 데이터 업로드</h2>
             <p>급여/상여 대장을 업로드하여 시스템에 반영하세요</p>
-        </div>
+            </div>
         <div class="upload-area">
             <div class="upload-box" onclick="triggerFileUpload()">
                 <i class="fas fa-cloud-upload-alt"></i>
@@ -644,23 +667,23 @@ function getUploadPageContent() {
                 <p>지원 형식: Excel (.xlsx), CSV (.csv), JSON (.json), TXT (.txt)</p>
                 <input type="file" id="fileInput" accept=".xlsx,.csv,.json,.txt" multiple style="display: none;">
                 <button class="btn" type="button" onclick="triggerFileUpload()">파일 선택</button>
-            </div>
-        </div>
+                </div>
+                </div>
         <div class="upload-guide">
             <h3><i class="fas fa-info-circle"></i> 업로드 가이드</h3>
             <div class="guide-cards">
                 <div class="guide-card">
                     <h4>Excel (.xlsx)</h4>
                     <p>첫 번째 시트의 첫 행을 헤더로 인식합니다.</p>
-                </div>
+            </div>
                 <div class="guide-card">
                     <h4>CSV (.csv)</h4>
                     <p>UTF-8 인코딩, 쉼표로 구분된 값을 지원합니다.</p>
-                </div>
+            </div>
                 <div class="guide-card">
                     <h4>JSON (.json/.txt)</h4>
                     <p>배열 형태의 객체 데이터를 지원합니다.</p>
-                </div>
+        </div>
             </div>
         </div>
     `;
@@ -750,7 +773,7 @@ function showSalaryUploadSuccess(fileName, analysis) {
                 <i class="fas fa-check-circle"></i>
                 <h3>급여 데이터 업로드 완료!</h3>
                 <p class="file-name">${fileName}</p>
-            </div>
+        </div>
             
             <div class="data-summary">
                 <div class="summary-cards">
@@ -759,44 +782,44 @@ function showSalaryUploadSuccess(fileName, analysis) {
                         <div class="card-content">
                             <h4>${analysis.totalRecords.toLocaleString()}</h4>
                             <p>총 급여 레코드</p>
-                        </div>
-                    </div>
+            </div>
+            </div>
                     <div class="summary-card">
                         <div class="card-icon"><i class="fas fa-users"></i></div>
                         <div class="card-content">
                             <h4>${analysis.uniqueEmployees}</h4>
                             <p>고유 직원 수</p>
-                        </div>
+            </div>
                     </div>
                     <div class="summary-card">
                         <div class="card-icon"><i class="fas fa-building"></i></div>
                         <div class="card-content">
                             <h4>${analysis.departments.length}</h4>
                             <p>부서 수</p>
-                        </div>
+                    </div>
                     </div>
                     <div class="summary-card">
                         <div class="card-icon"><i class="fas fa-calendar"></i></div>
                         <div class="card-content">
                             <h4>${analysis.yearRange.min}-${analysis.yearRange.max}</h4>
                             <p>데이터 기간</p>
-                        </div>
-                    </div>
                 </div>
+            </div>
+        </div>
                 
                 <div class="financial-summary">
                     <div class="financial-card total-pay">
                         <h4>총 지급액</h4>
                         <p class="amount">₩${analysis.totalPayment.toLocaleString()}</p>
-                    </div>
+        </div>
                     <div class="financial-card total-deduction">
                         <h4>총 공제액</h4>
                         <p class="amount">₩${analysis.totalDeduction.toLocaleString()}</p>
-                    </div>
+                </div>
                     <div class="financial-card net-pay">
                         <h4>순 지급액</h4>
                         <p class="amount">₩${(analysis.totalPayment - analysis.totalDeduction).toLocaleString()}</p>
-                    </div>
+            </div>
                 </div>
             </div>
             
@@ -806,15 +829,15 @@ function showSalaryUploadSuccess(fileName, analysis) {
                     <div class="insight-item">
                         <span class="insight-label">주요 회사:</span>
                         <span class="insight-value">${analysis.companies.join(', ')}</span>
-                    </div>
+                            </div>
                     <div class="insight-item">
                         <span class="insight-label">최다 부서:</span>
                         <span class="insight-value">${analysis.departmentStats.sort((a, b) => b.employeeCount - a.employeeCount)[0]?.name || 'N/A'}</span>
-                    </div>
+                </div>
                     <div class="insight-item">
                         <span class="insight-label">급여 유형:</span>
                         <span class="insight-value">${analysis.payPeriods.length}가지 유형</span>
-                    </div>
+            </div>
                 </div>
             </div>
             
@@ -860,21 +883,21 @@ function showDetailedAnalysis() {
                 <button class="tab-btn" onclick="showAnalysisTab('position')">직급별 분석</button>
                 <button class="tab-btn" onclick="showAnalysisTab('trend')">트렌드 분석</button>
                 <button class="tab-btn" onclick="showAnalysisTab('insurance')">4대보험 분석</button>
-            </div>
+        </div>
             
             <div class="analysis-content">
                 <div id="department-analysis" class="analysis-tab-content active">
                     ${generateDepartmentAnalysis()}
-                </div>
+            </div>
                 <div id="position-analysis" class="analysis-tab-content">
                     ${generatePositionAnalysis()}
-                </div>
+            </div>
                 <div id="trend-analysis" class="analysis-tab-content">
                     <div class="coming-soon">
                         <i class="fas fa-chart-line"></i>
                         <h3>트렌드 분석</h3>
                         <p>시계열 분석 및 예측 기능이 곧 추가됩니다</p>
-                    </div>
+            </div>
                 </div>
                 <div id="insurance-analysis" class="analysis-tab-content">
                     <div class="coming-soon">
@@ -925,7 +948,7 @@ function generateDepartmentAnalysis() {
                     <div class="percentage-bar">
                         <div class="percentage-fill" style="width: ${percentage}%"></div>
                         <span class="percentage-text">${percentage}%</span>
-                    </div>
+            </div>
                 </td>
             </tr>
         `;
@@ -934,10 +957,10 @@ function generateDepartmentAnalysis() {
     html += `
                     </tbody>
                 </table>
-            </div>
-        </div>
-    `;
-    
+                    </div>
+                </div>
+            `;
+            
     return html;
 }
 
@@ -976,7 +999,7 @@ function generatePositionAnalysis() {
                     <div class="level-indicator">
                         <div class="level-bar" style="width: ${level}%"></div>
                         <span class="level-text">${level.toFixed(0)}%</span>
-                    </div>
+                </div>
                 </td>
             </tr>
         `;
@@ -1086,7 +1109,7 @@ function setupFileUploadEvents() {
                 fileInput.click();
             });
         }
-    } else {
+        } else {
         console.log('파일 입력 요소를 찾을 수 없음');
     }
 }

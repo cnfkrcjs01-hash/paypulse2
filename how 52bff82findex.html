@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse - AI 인건비 관리 시스템</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 사이드바 -->
+        <div class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">💰</div>
+                <span>PayPulse</span>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">대시보드</div>
+                <div class="menu-item active" data-page="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>메인 대시보드</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">데이터 관리</div>
+                <div class="menu-item" data-page="upload">
+                    <i class="fas fa-upload"></i>
+                    <span>급여/상여 대장 업로드</span>
+                </div>
+                <div class="menu-item" data-page="employee">
+                    <i class="fas fa-users"></i>
+                    <span>직원 정보 관리</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">보험 및 계산</div>
+                <div class="menu-item" data-page="insurance">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>4대 보험 요율</span>
+                </div>
+                <div class="menu-item" data-page="calculation">
+                    <i class="fas fa-calculator"></i>
+                    <span>인건비 계산</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">퇴직 관리</div>
+                <div class="menu-item" data-page="retirement">
+                    <i class="fas fa-piggy-bank"></i>
+                    <span>퇴직금 계산기</span>
+                </div>
+                <div class="menu-item" data-page="provision">
+                    <i class="fas fa-chart-line"></i>
+                    <span>퇴직충당금</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">AI 분석</div>
+                <div class="menu-item" data-page="ai-chat">
+                    <i class="fas fa-robot"></i>
+                    <span>AI 어시스턴트</span>
+                </div>
+                <div class="menu-item" data-page="analytics">
+                    <i class="fas fa-brain"></i>
+                    <span>AI 진단 분석</span>
+                </div>
+                <div class="menu-item" data-page="hc-roi">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>HC ROI 분석</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-title">리포트</div>
+                <div class="menu-item" data-page="reports">
+                    <i class="fas fa-file-alt"></i>
+                    <span>급여명세서</span>
+                </div>
+                <div class="menu-item" data-page="risk-matrix">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>리스크 매트릭스</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 콘텐츠 -->
+        <div class="main-content">
+            <div class="header">
+                <h1>PayPulse</h1>
+                <p>AI 기반 스마트 인건비 관리 시스템</p>
+                <div class="subtitle">데이터 기반 의사결정으로 미래를 예측하세요</div>
+            </div>
+
+            <!-- 대시보드 카드들 -->
+            <div class="dashboard" id="main-dashboard">
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h3>데이터 업로드</h3>
+                    <p>급여/상여 대장을 업로드하고 모든 시스템에 자동 반영됩니다. Excel, CSV, JSON 형식을 지원합니다.</p>
+                    <br>
+                    <button class="btn" onclick="switchPage('upload')">
+                        <i class="fas fa-arrow-right"></i>
+                        시작하기
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h3>AI 어시스턴트</h3>
+                    <p>업로드된 데이터를 기반으로 과거 분석, 현재 진단, 미래 예측까지 제공하는 똑똑한 AI입니다.</p>
+                    <br>
+                    <button class="btn btn-secondary" onclick="switchPage('ai-chat')">
+                        <i class="fas fa-comments"></i>
+                        대화 시작
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h3>스마트 계산</h3>
+                    <p>4대보험 요율 자동 적용, 퇴직금 계산, 인건비 시뮬레이션까지 한 번에 처리합니다.</p>
+                    <br>
+                    <button class="btn btn-outline" onclick="switchPage('calculation')">
+                        <i class="fas fa-play"></i>
+                        계산하기
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>분석 & 예측</h3>
+                    <p>HC ROI 분석, 리스크 매트릭스, 트렌드 예측으로 전략적 인사관리를 지원합니다.</p>
+                    <br>
+                    <button class="btn btn-outline" onclick="switchPage('analytics')">
+                        <i class="fas fa-chart-bar"></i>
+                        분석 보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 각 페이지 콘텐츠는 여기에 동적으로 로드됩니다 -->
+            <div id="page-content"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
