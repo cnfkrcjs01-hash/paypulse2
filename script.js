@@ -46,11 +46,31 @@ function setupPageSpecificEvents(pageName) {
     console.log('페이지별 이벤트 설정:', pageName);
     
     switch (pageName) {
-        case 'upload':
-            // 업로드 페이지 이벤트 설정
+        case 'data-manager':
+            // 새로운 PayPulse 데이터 관리 시스템 초기화
             setTimeout(() => {
-                setupFileUploadEvents();
-            }, 100);
+                console.log('🎯 새로운 PayPulse 데이터 관리 시스템 초기화 시작');
+                if (typeof PayPulseDataManager === 'function') {
+                    // 기존 인스턴스가 있다면 정리
+                    if (window.dataManager) {
+                        console.log('기존 데이터 관리자 정리');
+                    }
+                    // 새로운 인스턴스 생성
+                    window.dataManager = new PayPulseDataManager();
+                    window.dataManager.init();
+                    console.log('✅ 새로운 PayPulse 데이터 관리 시스템 초기화 완료');
+                } else {
+                    console.log('paypulse-manager.js 로드 대기 중...');
+                    const checkDataManager = setInterval(() => {
+                        if (typeof PayPulseDataManager === 'function') {
+                            window.dataManager = new PayPulseDataManager();
+                            window.dataManager.init();
+                            console.log('✅ 새로운 PayPulse 데이터 관리 시스템 초기화 완료 (지연)');
+                            clearInterval(checkDataManager);
+                        }
+                    }, 100);
+                }
+            }, 200);
             break;
         case 'ai-chat':
             // AI 채팅 페이지 이벤트 설정 (향후 구현)
@@ -206,14 +226,161 @@ function setupPageSpecificEvents(pageName) {
 // 기본 페이지 콘텐츠 함수
 function getPageContent(pageName) {
     switch (pageName) {
-        case 'upload':
-            return getUploadPageContent();
+        case 'data-manager':
+            // 새로운 PayPulse 데이터 관리 HTML 반환
+            return `
+                <div id="app">
+                    <!-- 헤더 -->
+                    <header class="pdm-header">
+                        <div class="header-content">
+                            <h1>📊 PayPulse 데이터 관리</h1>
+                            <p>스마트한 급여 데이터 관리 시스템</p>
+                        </div>
+                        <!-- 헤더 통계 - 의미있는 정보만 -->
+                        <div class="header-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">업로드된 파일</span>
+                                <span class="stat-value" id="fileCountHeader">0개</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">최근 업로드</span>
+                                <span class="stat-value" id="lastUploadDate">-</span>
+                            </div>
+                        </div>
+                    </header>
 
+                    <!-- 네비게이션 -->
+                    <nav class="pdm-navigation">
+                        <button class="nav-btn active" data-view="dashboard">🏠 대시보드</button>
+                        <button class="nav-btn" data-view="upload">📤 업로드</button>
+                        <button class="nav-btn" data-view="history">📋 히스토리</button>
+                        <button class="nav-btn" data-view="preview" id="previewBtn" style="display: none;">👁️ 미리보기</button>
+                    </nav>
+
+                    <!-- 메인 컨텐츠 -->
+                    <main class="pdm-content">
+                        <!-- 대시보드 뷰 -->
+                        <div id="dashboardView" class="view-container">
+                            <!-- 대시보드 그리드 - 의미없는 카드 제거 -->
+                            <div class="dashboard-grid">
+                                <div class="dashboard-card">
+                                    <h3>📁 업로드된 파일</h3>
+                                    <div class="file-count" id="fileCount">0개</div>
+                                    <div class="file-types">
+                                        <span>템플릿: <span id="templateCount">0</span></span>
+                                        <span>급여대장: <span id="payrollCount">0</span></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="dashboard-card">
+                                    <h3>📊 데이터 현황</h3>
+                                    <div class="data-overview">
+                                        <div>개별 파일별로</div>
+                                        <div>데이터를 관리합니다</div>
+                                        <div class="data-note">누적 계산하지 않음</div>
+                                    </div>
+                                </div>
+
+                                <div class="dashboard-card quick-upload">
+                                    <h3>⚡ 빠른 업로드</h3>
+                                    <button class="quick-upload-btn" id="quickUploadBtn">
+                                        새 파일 업로드
+                                    </button>
+                                </div>
+
+                                <div class="dashboard-card">
+                                    <h3>🔍 데이터 분석</h3>
+                                    <div class="analysis-info">
+                                        <div>각 파일을 개별적으로</div>
+                                        <div>미리보기에서 확인하세요</div>
+                                        <button class="analysis-btn" id="analysisBtn">
+                                            파일 목록 보기
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="recent-files" id="recentFiles" style="display: none;">
+                                <h3>최근 업로드된 파일</h3>
+                                <div class="recent-files-list" id="recentFilesList"></div>
+                            </div>
+                        </div>
+
+                        <!-- 업로드 뷰 -->
+                        <div id="uploadView" class="view-container" style="display: none;">
+                            <div class="upload-container">
+                                <h2>📤 파일 업로드</h2>
+                                
+                                <div class="upload-zone" id="uploadZone">
+                                    <div class="upload-content">
+                                        <div class="upload-icon">📁</div>
+                                        <h3>파일을 드래그하거나 클릭하여 업로드</h3>
+                                        <p>Excel (.xlsx, .xls), CSV 파일을 지원합니다</p>
+                                        <button class="upload-btn" id="selectFileBtn">파일 선택</button>
+                                    </div>
+                                    <div class="uploading" id="uploadingIndicator" style="display: none;">
+                                        <div class="spinner"></div>
+                                        <p>업로드 중...</p>
+                                    </div>
+                                </div>
+
+                                <!-- 숨겨진 파일 입력 -->
+                                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+                                <div class="upload-guide">
+                                    <h4>📋 업로드 가이드</h4>
+                                    <ul>
+                                        <li>Excel 파일(.xlsx, .xls) 또는 CSV 파일을 업로드할 수 있습니다</li>
+                                        <li>파일명에 "템플릿"이 포함되면 템플릿으로 자동 분류됩니다</li>
+                                        <li>파일명에 "급여"가 포함되면 급여대장으로 자동 분류됩니다</li>
+                                        <li>업로드된 파일은 즉시 미리보기에서 확인할 수 있습니다</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 히스토리 뷰 -->
+                        <div id="historyView" class="view-container" style="display: none;">
+                            <h2>📋 업로드 히스토리</h2>
+                            
+                            <div class="empty-state" id="emptyState">
+                                <p>아직 업로드된 파일이 없습니다.</p>
+                                <button class="upload-btn" id="emptyUploadBtn">
+                                    첫 번째 파일 업로드하기
+                                </button>
+                            </div>
+
+                            <div class="files-list" id="filesList" style="display: none;"></div>
+                        </div>
+
+                        <!-- 미리보기 뷰 -->
+                        <div id="previewView" class="view-container" style="display: none;">
+                            <div class="preview-header">
+                                <h2 id="previewTitle">👁️ 파일 미리보기</h2>
+                                <div class="preview-info" id="previewInfo"></div>
+                            </div>
+
+                            <div class="preview-content" id="previewContent"></div>
+
+                            <div class="preview-actions">
+                                <button class="delete-btn" id="deleteCurrentBtn">
+                                    🗑️ 파일 삭제
+                                </button>
+                                <button class="view-btn" id="exportBtn">
+                                    📊 PayPulse 연동
+                                </button>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            `;
+            break;
+            
         case 'insurance':
             // insurance_rates.js에서 HTML을 가져옴
             if (typeof getInsuranceRatesHTML === 'function') {
                 return getInsuranceRatesHTML();
-    } else {
+            } else {
                 return `
             <div class="page-header">
                         <h2><i class="fas fa-shield-alt"></i> 4대 보험 요율</h2>
@@ -225,8 +392,11 @@ function getPageContent(pageName) {
                         </div>
                 `;
             }
+            break;
+            
         case 'calculation':
             return getSmartSalaryCalculatorHTML();
+            break;
 
         case 'provision':
             return `
@@ -240,6 +410,8 @@ function getPageContent(pageName) {
                     <p>퇴직충당금 관리 기능이 곧 추가됩니다</p>
                 </div>
             `;
+            break;
+            
         case 'ai-chat':
             return `
     <div class="page-header">
@@ -340,18 +512,6 @@ function getPageContent(pageName) {
                             <p>전문가 분석 시스템을 로드하는 중...</p>
                     </div>
                         </div>
-                        </div>
-            `;
-        case 'upload':
-            return `
-            <div class="page-header">
-                    <h2><i class="fas fa-upload"></i> 통합 데이터 업로드</h2>
-                    <p>다양한 형식의 데이터를 업로드하세요</p>
-            </div>
-                <div class="coming-soon">
-                    <i class="fas fa-upload"></i>
-                    <h3>통합 데이터 업로드</h3>
-                    <p>통합 데이터 업로드 기능이 곧 추가됩니다</p>
                         </div>
             `;
         case 'expert-analysis':
@@ -472,248 +632,9 @@ function setupMenuEvents() {
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', function() {
     setupMenuEvents();
-    setupFileUploadEvents();
 });
 
-// 데이터 업로드 관련 함수들
-let uploadedData = []; // 업로드된 데이터 저장
 
-// 파일 업로드 처리 함수 개선
-function handleFileUpload(event) {
-    console.log('handleFileUpload 함수 시작');
-    
-    const files = event.target.files;
-    console.log('선택된 파일들:', files);
-    
-    if (!files || files.length === 0) {
-        console.log('파일이 선택되지 않음');
-        alert('파일을 선택해주세요.');
-        return;
-    }
-    
-    console.log('처리할 파일 개수:', files.length);
-    
-    // 각 파일 처리
-    Array.from(files).forEach((file, index) => {
-        console.log(`파일 ${index + 1} 처리 시작:`, file.name, file.type, file.size);
-        
-        const fileExtension = file.name.split('.').pop().toLowerCase();
-        console.log('파일 확장자:', fileExtension);
-        
-        // 지원하는 파일 형식 확인
-        if (['json', 'txt', 'csv', 'xlsx'].includes(fileExtension)) {
-            processFile(file, fileExtension);
-        } else {
-            console.log('지원하지 않는 파일 형식:', fileExtension);
-            alert(`지원하지 않는 파일 형식입니다: ${file.name}\n지원 형식: JSON, TXT, CSV, XLSX`);
-            }
-        });
-    }
-
-// 파일 처리 함수 개선
-function processFile(file, extension) {
-    console.log('processFile 시작:', file.name, extension);
-    
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-        console.log('파일 읽기 완료');
-        const data = e.target.result;
-        
-        try {
-    switch (extension) {
-        case 'json':
-                case 'txt': // .json.txt 파일도 JSON으로 처리
-                    console.log('JSON 데이터 파싱 시작');
-                    const jsonData = JSON.parse(data);
-                    console.log('JSON 파싱 완료, 데이터 개수:', Array.isArray(jsonData) ? jsonData.length : 'Object');
-                    processJsonData(jsonData, file.name);
-                    break;
-                case 'csv':
-                    console.log('CSV 데이터 처리 시작');
-                    processCsvData(data, file.name);
-                    break;
-        case 'xlsx':
-                    console.log('Excel 파일 처리 시작');
-                    processExcelData(data, file.name);
-                    break;
-        default:
-                    console.log('알 수 없는 파일 형식:', extension);
-                    alert('알 수 없는 파일 형식입니다.');
-            }
-            } catch (error) {
-            console.error('파일 처리 중 오류:', error);
-            alert(`파일 처리 중 오류가 발생했습니다: ${file.name}\n오류: ${error.message}`);
-        }
-    };
-    
-    reader.onerror = function(error) {
-        console.error('파일 읽기 오류:', error);
-        alert(`파일 읽기 중 오류가 발생했습니다: ${file.name}`);
-    };
-    
-    // 파일 읽기 시작
-    if (extension === 'xlsx') {
-        reader.readAsArrayBuffer(file);
-                        } else {
-        reader.readAsText(file, 'UTF-8');
-    }
-}
-
-// JSON 데이터 처리
-function processJsonData(data, fileName) {
-    console.log('JSON 데이터 처리:', data);
-    uploadedData.push({
-        fileName: fileName,
-        type: 'json',
-        data: data,
-        uploadTime: new Date()
-    });
-    
-    showUploadSuccess(fileName, data.length || Object.keys(data).length);
-    updateDataPreview(data, 'json');
-}
-
-// CSV 데이터 처리
-function processCsvData(csvText, fileName) {
-    const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
-    const rows = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
-        const row = {};
-        headers.forEach((header, index) => {
-            row[header] = values[index] || '';
-        });
-        rows.push(row);
-    }
-    
-    console.log('CSV 데이터 처리:', rows);
-    uploadedData.push({
-        fileName: fileName,
-        type: 'csv',
-        data: rows,
-        uploadTime: new Date(),
-        headers: headers
-    });
-    
-    showUploadSuccess(fileName, rows.length);
-    updateDataPreview(rows, 'csv');
-}
-
-// Excel 데이터 처리 (라이브러리 필요)
-function processExcelData(arrayBuffer, fileName) {
-    // SheetJS 라이브러리 사용 예정
-    alert('Excel 파일 처리 기능은 곧 구현됩니다!');
-}
-
-// 업로드 성공 메시지
-function showUploadSuccess(fileName, recordCount) {
-    const successMessage = `
-        <div class="upload-success">
-            <i class="fas fa-check-circle"></i>
-            <h3>업로드 완료!</h3>
-            <p><strong>${fileName}</strong></p>
-            <p>${recordCount}개의 레코드가 처리되었습니다.</p>
-        </div>
-    `;
-    
-    // 페이지에 성공 메시지 표시
-    const pageContent = document.getElementById('page-content');
-    pageContent.innerHTML = getPageContent('upload') + successMessage;
-    
-    // 파일 입력 이벤트 다시 연결
-    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
-}
-
-// 데이터 미리보기 업데이트
-function updateDataPreview(data, type) {
-    const previewHtml = `
-        <div class="data-preview">
-            <h3><i class="fas fa-table"></i> 데이터 미리보기</h3>
-            <div class="preview-table">
-                ${generatePreviewTable(data, type)}
-            </div>
-            <div class="data-actions">
-                <button class="btn" onclick="viewAllData()">전체 데이터 보기</button>
-                <button class="btn btn-secondary" onclick="analyzeData()">AI 분석 시작</button>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('page-content').innerHTML += previewHtml;
-}
-
-// 미리보기 테이블 생성
-function generatePreviewTable(data, type) {
-    if (!data || data.length === 0) return '<p>데이터가 없습니다.</p>';
-    
-    const sampleData = data.slice(0, 5); // 첫 5개 행만 미리보기
-    const headers = Object.keys(sampleData[0]);
-    
-    let tableHtml = '<table class="preview-table-content"><thead><tr>';
-    headers.forEach(header => {
-        tableHtml += `<th>${header}</th>`;
-    });
-    tableHtml += '</tr></thead><tbody>';
-    
-    sampleData.forEach(row => {
-        tableHtml += '<tr>';
-        headers.forEach(header => {
-            tableHtml += `<td>${row[header] || ''}</td>`;
-        });
-        tableHtml += '</tr>';
-    });
-    
-    tableHtml += '</tbody></table>';
-    return tableHtml;
-}
-
-// 업로드 페이지 콘텐츠 업데이트
-function getUploadPageContent() {
-    return `
-        <div class="page-header">
-            <h2><i class="fas fa-upload"></i> 데이터 업로드</h2>
-            <p>급여/상여 대장을 업로드하여 시스템에 반영하세요</p>
-            </div>
-        <div class="upload-area">
-            <div class="upload-box" onclick="triggerFileUpload()">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h3>파일을 드래그하거나 클릭하여 업로드</h3>
-                <p>지원 형식: Excel (.xlsx), CSV (.csv), JSON (.json), TXT (.txt)</p>
-                <input type="file" id="fileInput" accept=".xlsx,.csv,.json,.txt" multiple style="display: none;">
-                <button class="btn" type="button" onclick="triggerFileUpload()">파일 선택</button>
-                </div>
-                </div>
-        <div class="upload-guide">
-            <h3><i class="fas fa-info-circle"></i> 업로드 가이드</h3>
-            <div class="guide-cards">
-                <div class="guide-card">
-                    <h4>Excel (.xlsx)</h4>
-                    <p>첫 번째 시트의 첫 행을 헤더로 인식합니다.</p>
-            </div>
-                <div class="guide-card">
-                    <h4>CSV (.csv)</h4>
-                    <p>UTF-8 인코딩, 쉼표로 구분된 값을 지원합니다.</p>
-            </div>
-                <div class="guide-card">
-                    <h4>JSON (.json/.txt)</h4>
-                    <p>배열 형태의 객체 데이터를 지원합니다.</p>
-        </div>
-            </div>
-        </div>
-    `;
-}
-
-// 페이지 콘텐츠 함수 업데이트
-const originalGetPageContent = getPageContent;
-getPageContent = function(pageName) {
-    if (pageName === 'upload') {
-        return getUploadPageContent();
-    }
-    return originalGetPageContent(pageName);
-};
 
 // 급여 데이터 전용 처리 함수들
 let salaryData = []; // 급여 데이터 저장
@@ -1077,7 +998,67 @@ function startAIAnalysis() {
     }, 500);
 }
 
-// 기존 JSON 처리 함수 업데이트
+// 누락된 함수들 정의
+function processCsvData(csvText, fileName) {
+    console.log('CSV 데이터 처리:', fileName);
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        const row = {};
+        headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+        });
+        rows.push(row);
+    }
+    
+    processJsonData(rows, fileName);
+}
+
+function processExcelData(arrayBuffer, fileName) {
+    console.log('Excel 데이터 처리:', fileName);
+    alert('Excel 파일 처리 기능은 곧 구현됩니다!');
+}
+
+function updateDataPreview(data, type) {
+    console.log('데이터 미리보기 업데이트:', type);
+    // 미리보기 업데이트 로직
+}
+
+function generatePreviewTable(data, type) {
+    if (!data || data.length === 0) return '<p>데이터가 없습니다.</p>';
+    
+    const sampleData = data.slice(0, 5); // 첫 5개 행만 미리보기
+    const headers = Object.keys(sampleData[0]);
+    
+    let tableHtml = '<table class="preview-table-content"><thead><tr>';
+    headers.forEach(header => {
+        tableHtml += `<th>${header}</th>`;
+    });
+    tableHtml += '</tr></thead><tbody>';
+    
+    sampleData.forEach(row => {
+        tableHtml += '<tr>';
+        headers.forEach(header => {
+            tableHtml += `<td>${row[header] || ''}</td>`;
+        });
+        tableHtml += '</tr>';
+    });
+    
+    tableHtml += '</tbody></table>';
+    return tableHtml;
+}
+
+// 기본 JSON 처리 함수 정의
+function processJsonData(data, fileName) {
+    console.log('기본 JSON 데이터 처리:', data);
+    // 기본 처리 로직 - 단순히 데이터를 표시
+    alert(`${fileName} 파일이 업로드되었습니다. ${Array.isArray(data) ? data.length : Object.keys(data).length}개의 항목이 있습니다.`);
+}
+
+// 급여 데이터 전용 JSON 처리 함수
 const originalProcessJsonData = processJsonData;
 processJsonData = function(data, fileName) {
     // 급여 데이터인지 확인 (사번, 성명, 급여일_급여유형 필드가 있으면 급여 데이터로 판단)
@@ -1092,44 +1073,7 @@ processJsonData = function(data, fileName) {
     }
 };
 
-// 파일 업로드 트리거 함수
-function triggerFileUpload() {
-    console.log('triggerFileUpload 함수 호출됨');
-    const fileInput = document.getElementById('fileInput');
-    if (fileInput) {
-        fileInput.click();
-    } else {
-        console.error('fileInput 요소를 찾을 수 없습니다.');
-    }
-}
 
-// 파일 업로드 이벤트 설정 (완전 새로운 버전)
-function setupFileUploadEvents() {
-    console.log('파일 업로드 이벤트 설정 시작');
-    
-    const fileInput = document.getElementById('fileInput');
-    if (fileInput) {
-        console.log('파일 입력 요소 발견됨');
-        
-        // 기존 이벤트 제거 후 새로 추가
-        fileInput.removeEventListener('change', handleFileUpload);
-        fileInput.addEventListener('change', function(e) {
-            console.log('파일 선택됨:', e.target.files.length, '개');
-            handleFileUpload(e);
-        });
-        
-        // 업로드 박스 클릭 이벤트
-        const uploadBox = document.querySelector('.upload-box');
-        if (uploadBox) {
-            uploadBox.addEventListener('click', function(e) {
-                console.log('업로드 박스 클릭됨');
-                fileInput.click();
-            });
-        }
-        } else {
-        console.log('파일 입력 요소를 찾을 수 없음');
-    }
-}
 
 // 요약 리포트 내보내기
 function exportSummary() {

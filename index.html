@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="file_management_styles.css">
     <link rel="stylesheet" href="ai_analytics_styles.css">
     <link rel="stylesheet" href="direct_labor_styles.css">
+    <link rel="stylesheet" href="PayPulseDataManager.css">
+    <link rel="stylesheet" href="paypulse-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -50,13 +53,9 @@
 
             <div class="menu-section">
                 <div class="menu-title">데이터 관리</div>
-                <div class="menu-item" data-page="upload">
-                    <i class="fas fa-upload"></i>
-                    <span>통합 데이터 업로드</span>
-                </div>
-                <div class="menu-item" data-page="upload-history">
-                    <i class="fas fa-history"></i>
-                    <span>업로드 화면</span>
+                <div class="menu-item" data-page="data-manager">
+                    <i class="fas fa-database"></i>
+                    <span>📊 PayPulse 데이터 관리</span>
                 </div>
             </div>
 
@@ -1139,6 +1138,8 @@ ${JSON.stringify(data[0], null, 2)}
             alert('📄 샘플 JSON 파일이 다운로드되었습니다!\n\n이 파일을 참고하여 데이터 형식을 맞춰주세요.');
         };
     </script>
+    <script src="paypulse_data_manager.js"></script>
+<script src="paypulse-manager.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse 데이터 관리</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8f9fa;
+            line-height: 1.6;
+        }
+
+        /* 헤더 */
+        .pdm-header {
+            background: linear-gradient(135deg, #FF5722 0%, #FF8A65 100%);
+            color: white;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-content h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header-content p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat-item {
+            text-align: right;
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        /* 네비게이션 */
+        .pdm-navigation {
+            background: white;
+            padding: 0 2rem;
+            display: flex;
+            gap: 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            color: #FF5722;
+            background: #f5f5f5;
+        }
+
+        .nav-btn.active {
+            color: #FF5722;
+            border-bottom-color: #FF5722;
+            font-weight: 600;
+        }
+
+        /* 메인 컨텐츠 */
+        .pdm-content {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .view-container {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 대시보드 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .dashboard-card h3 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .file-count {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #FF5722;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-types {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .data-overview {
+            text-align: center;
+            color: #666;
+        }
+
+        .data-note {
+            font-size: 0.8rem;
+            color: #FF5722;
+            font-weight: 500;
+            margin-top: 0.5rem;
+        }
+
+        .quick-upload {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .quick-upload-btn {
+            background: #FF5722;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .quick-upload-btn:hover {
+            background: #E64A19;
+        }
+
+        .analysis-info {
+            text-align: center;
+            color: #666;
+        }
+
+        .analysis-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .analysis-btn:hover {
+            background: #1976D2;
+        }
+
+        /* 업로드 뷰 */
+        .upload-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .upload-container h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        .upload-zone {
+            border: 3px dashed #ddd;
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            background: white;
+            transition: all 0.2s;
+            margin-bottom: 2rem;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #FF5722;
+            background: #fef7f5;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone h3 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+
+        .upload-zone p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-btn {
+            background: #FF5722;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: #E64A19;
+        }
+
+        .uploading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF5722;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .upload-guide {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .upload-guide h4 {
+            margin: 0 0 1rem 0;
+            color: #FF5722;
+        }
+
+        .upload-guide ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        /* 히스토리 */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .files-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .file-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-type-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .file-type-badge.template {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .file-type-badge.payroll {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .file-type-badge.other {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .file-header h4 {
+            margin: 0;
+            color: #333;
+        }
+
+        .file-details {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .view-btn {
+            background: #FF5722;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .delete-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        /* 최근 파일 */
+        .recent-files {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .recent-files h3 {
+            margin: 0 0 1rem 0;
+        }
+
+        .recent-files-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .recent-file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .file-date {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        /* 알림 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            transform: translateX(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: #4caf50;
+        }
+
+        .notification.error {
+            background: #f44336;
+        }
+
+        .notification.info {
+            background: #2196f3;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .pdm-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .header-stats {
+                align-self: stretch;
+                justify-content: space-between;
+            }
+
+            .pdm-navigation {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            .pdm-content {
+                padding: 1rem;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .file-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .file-actions {
+                align-self: stretch;
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 헤더 -->
+        <header class="pdm-header">
+            <div class="header-content">
+                <h1>📊 PayPulse 데이터 관리</h1>
+                <p>스마트한 급여 데이터 관리 시스템</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">업로드된 파일</span>
+                    <span class="stat-value" id="fileCountHeader">0개</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최근 업로드</span>
+                    <span class="stat-value" id="lastUploadDate">-</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 네비게이션 -->
+        <nav class="pdm-navigation">
+            <button class="nav-btn active" data-view="dashboard">🏠 대시보드</button>
+            <button class="nav-btn" data-view="upload">📤 업로드</button>
+            <button class="nav-btn" data-view="history">📋 히스토리</button>
+            <button class="nav-btn" data-view="preview" id="previewBtn" style="display: none;">👁️ 미리보기</button>
+        </nav>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="pdm-content">
+            <!-- 대시보드 뷰 -->
+            <div id="dashboardView" class="view-container">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>📁 업로드된 파일</h3>
+                        <div class="file-count" id="fileCount">0개</div>
+                        <div class="file-types">
+                            <span>템플릿: <span id="templateCount">0</span></span>
+                            <span>급여대장: <span id="payrollCount">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>📊 데이터 현황</h3>
+                        <div class="data-overview">
+                            <div>개별 파일별로</div>
+                            <div>데이터를 관리합니다</div>
+                            <div class="data-note">누적 계산하지 않음</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card quick-upload">
+                        <h3>⚡ 빠른 업로드</h3>
+                        <button class="quick-upload-btn" id="quickUploadBtn">
+                            새 파일 업로드
+                        </button>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3>🔍 데이터 분석</h3>
+                        <div class="analysis-info">
+                            <div>각 파일을 개별적으로</div>
+                            <div>미리보기에서 확인하세요</div>
+                            <button class="analysis-btn" id="analysisBtn">
+                                파일 목록 보기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-files" id="recentFiles" style="display: none;">
+                    <h3>최근 업로드된 파일</h3>
+                    <div class="recent-files-list" id="recentFilesList"></div>
+                </div>
+            </div>
+
+            <!-- 업로드 뷰 -->
+            <div id="uploadView" class="view-container" style="display: none;">
+                <div class="upload-container">
+                    <h2>📤 파일 업로드</h2>
+                    
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <h3>파일을 드래그하거나 클릭하여 업로드</h3>
+                            <p>Excel (.xlsx, .xls), CSV 파일을 지원합니다</p>
+                            <button class="upload-btn" id="selectFileBtn">파일 선택</button>
+                        </div>
+                        <div class="uploading" id="uploadingIndicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>업로드 중...</p>
+                        </div>
+                    </div>
+
+                    <!-- 숨겨진 파일 입력 -->
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+                    <div class="upload-guide">
+                        <h4>📋 업로드 가이드</h4>
+                        <ul>
+                            <li>Excel 파일(.xlsx, .xls) 또는 CSV 파일을 업로드할 수 있습니다</li>
+                            <li>파일명에 "템플릿"이 포함되면 템플릿으로 자동 분류됩니다</li>
+                            <li>파일명에 "급여"가 포함되면 급여대장으로 자동 분류됩니다</li>
+                            <li>업로드된 파일은 즉시 미리보기에서 확인할 수 있습니다</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 히스토리 뷰 -->
+            <div id="historyView" class="view-container" style="display: none;">
+                <h2>📋 업로드 히스토리</h2>
+                
+                <div class="empty-state" id="emptyState">
+                    <p>아직 업로드된 파일이 없습니다.</p>
+                    <button class="upload-btn" id="emptyUploadBtn">
+                        첫 번째 파일 업로드하기
+                    </button>
+                </div>
+
+                <div class="files-list" id="filesList" style="display: none;"></div>
+            </div>
+
+            <!-- 미리보기 뷰 -->
+            <div id="previewView" class="view-container" style="display: none;">
+                <div class="preview-header">
+                    <h2 id="previewTitle">👁️ 파일 미리보기</h2>
+                    <div class="preview-info" id="previewInfo"></div>
+                </div>
+
+                <div class="preview-content" id="previewContent"></div>
+
+                <div class="preview-actions">
+                    <button class="delete-btn" id="deleteCurrentBtn">
+                        🗑️ 파일 삭제
+                    </button>
+                    <button class="view-btn" id="exportBtn">
+                        📊 PayPulse 연동
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // PayPulse 데이터 관리자
+        class PayPulseDataManager {
+            constructor() {
+                this.uploadedFiles = [];
+                this.currentView = 'dashboard';
+                this.selectedFile = null;
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadSavedData();
+                this.updateUI();
+            }
+
+            setupEventListeners() {
+                // 네비게이션 버튼
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const view = e.target.getAttribute('data-view');
+                        this.switchView(view);
+                    });
+                });
+
+                // 업로드 관련 버튼들
+                document.getElementById('quickUploadBtn').addEventListener('click', () => {
+                    this.switchView('upload');
+                });
+
+                document.getElementById('selectFileBtn').addEventListener('click', () => {
+                    this.selectFile();
+                });
+
+                document.getElementById('emptyUploadBtn').addEventListener('click', () => {
+                    this.switchView('upload');
+                });
+
+                document.getElementById('analysisBtn').addEventListener('click', () => {
+                    this.switchView('history');
+                });
+
+                // 파일 입력
+                const fileInput = document.getElementById('fileInput');
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleFileUpload(e.target.files[0]);
+                    }
+                });
+
+                // 드래그 앤 드롭
+                const uploadZone = document.getElementById('uploadZone');
+                uploadZone.addEventListener('click', () => {
+                    this.selectFile();
+                });
+
+                uploadZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.add('drag-over');
+                });
+
+                uploadZone.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.remove('drag-over');
+                });
+
+                uploadZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadZone.classList.remove('drag-over');
+                    
+                    const files = Array.from(e.dataTransfer.files);
+                    const excelFile = files.find(f => 
+                        f.name.endsWith('.xlsx') || f.name.endsWith('.xls') || f.name.endsWith('.csv')
+                    );
+                    
+                    if (excelFile) {
+                        this.handleFileUpload(excelFile);
+                    }
+                });
+
+                // 미리보기 액션 버튼들
+                document.getElementById('deleteCurrentBtn').addEventListener('click', () => {
+                    this.deleteCurrentFile();
+                });
+
+                document.getElementById('exportBtn').addEventListener('click', () => {
+                    this.exportToPayPulse();
+                });
+            }
+
+            // 뷰 전환
+            switchView(viewName) {
+                // 모든 뷰 숨기기
+                document.querySelectorAll('.view-container').forEach(view => {
+                    view.style.display = 'none';
+                });
+
+                // 모든 네비게이션 버튼 비활성화
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // 선택된 뷰 표시
+                const targetView = document.getElementById(viewName + 'View');
+                if (targetView) {
+                    targetView.style.display = 'block';
+                }
+
+                // 선택된 버튼 활성화
+                const targetBtn = document.querySelector(`[data-view="${viewName}"]`);
+                if (targetBtn) {
+                    targetBtn.classList.add('active');
+                }
+
+                this.currentView = viewName;
+            }
+
+            // 파일 선택
+            selectFile() {
+                const fileInput = document.getElementById('fileInput');
+                fileInput.click();
+            }
+
+            // 파일 업로드 처리
+            async handleFileUpload(file) {
+                const indicator = document.getElementById('uploadingIndicator');
+                const content = document.querySelector('.upload-content');
+                
+                // 업로드 표시
+                indicator.style.display = 'block';
+                content.style.display = 'none';
+
+                try {
+                    // XLSX 라이브러리 확인
+                    if (typeof XLSX === 'undefined') {
+                        throw new Error('XLSX 라이브러리가 로드되지 않았습니다.');
+                    }
+
+                    const arrayBuffer = await file.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    
+                    const sheets = {};
+                    const allData = [];
+                    
+                    workbook.SheetNames.forEach(sheetName => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        sheets[sheetName] = jsonData;
+                        allData.push(...jsonData);
+                    });
+
+                    // 파일 타입 자동 감지
+                    let fileType = 'other';
+                    if (file.name.includes('템플릿') || file.name.includes('template')) {
+                        fileType = 'template';
+                    } else if (file.name.includes('급여') || file.name.includes('payroll') || file.name.includes('더미')) {
+                        fileType = 'payroll';
+                    }
+
+                    const uploadedFile = {
+                        id: Date.now().toString(),
+                        name: file.name,
+                        size: file.size,
+                        uploadDate: new Date(),
+                        data: allData,
+                        sheets: sheets,
+                        type: fileType
+                    };
+
+                    this.uploadedFiles.push(uploadedFile);
+                    this.selectedFile = uploadedFile;
+                    
+                    // 데이터 저장
+                    this.saveData();
+                    this.updateUI();
+                    
+                    // 미리보기로 자동 이동
+                    document.getElementById('previewBtn').style.display = 'inline-block';
+                    this.switchView('preview');
+                    this.showPreview(uploadedFile);
+
+                    this.showNotification('파일이 성공적으로 업로드되었습니다! 🎉', 'success');
+
+                } catch (error) {
+                    console.error('File upload error:', error);
+                    this.showNotification('파일 업로드 중 오류가 발생했습니다: ' + error.message, 'error');
+                } finally {
+                    // 업로드 표시 숨기기
+                    indicator.style.display = 'none';
+                    content.style.display = 'block';
+                }
+            }
+
+            // UI 업데이트
+            updateUI() {
+                // 헤더
+                document.getElementById('fileCountHeader').textContent = this.uploadedFiles.length + '개';
+                
+                const lastUploadDate = this.uploadedFiles.length > 0 ? 
+                    this.uploadedFiles[this.uploadedFiles.length - 1].uploadDate.toLocaleDateString() : '-';
+                document.getElementById('lastUploadDate').textContent = lastUploadDate;
+
+                // 대시보드
+                document.getElementById('fileCount').textContent = this.uploadedFiles.length + '개';
+                document.getElementById('templateCount').textContent = this.uploadedFiles.filter(f => f.type === 'template').length;
+                document.getElementById('payrollCount').textContent = this.uploadedFiles.filter(f => f.type === 'payroll').length;
+
+                this.updateRecentFiles();
+                this.updateHistory();
+            }
+
+            // 최근 파일 업데이트
+            updateRecentFiles() {
+                const recentFiles = document.getElementById('recentFiles');
+                const recentFilesList = document.getElementById('recentFilesList');
+
+                if (this.uploadedFiles.length === 0) {
+                    recentFiles.style.display = 'none';
+                    return;
+                }
+
+                recentFiles.style.display = 'block';
+                recentFilesList.innerHTML = '';
+
+                this.uploadedFiles.slice(-3).forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'recent-file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-name">${file.name}</span>
+                            <span class="file-date">${file.uploadDate.toLocaleDateString()}</span>
+                        </div>
+                        <button class="view-btn">보기</button>
+                    `;
+                    
+                    fileItem.querySelector('.view-btn').addEventListener('click', () => {
+                        this.viewFile(file.id);
+                    });
+                    
+                    recentFilesList.appendChild(fileItem);
+                });
+            }
+
+            // 히스토리 업데이트
+            updateHistory() {
+                const emptyState = document.getElementById('emptyState');
+                const filesList = document.getElementById('filesList');
+
+                if (this.uploadedFiles.length === 0) {
+                    emptyState.style.display = 'block';
+                    filesList.style.display = 'none';
+                    return;
+                }
+
+                emptyState.style.display = 'none';
+                filesList.style.display = 'block';
+                filesList.innerHTML = '';
+
+                this.uploadedFiles.forEach(file => {
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    
+                    const typeText = file.type === 'template' ? '템플릿' : 
+                                   file.type === 'payroll' ? '급여대장' : '기타';
+
+                    fileItem.innerHTML = `
+                        <div class="file-info">
+                            <div class="file-header">
+                                <span class="file-type-badge ${file.type}">${typeText}</span>
+                                <h4>${file.name}</h4>
+                            </div>
+                            <div class="file-details">
+                                <span>크기: ${(file.size / 1024).toFixed(1)} KB</span>
+                                <span>업로드: ${file.uploadDate.toLocaleString()}</span>
+                                <span>시트: ${Object.keys(file.sheets).length}개</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="view-btn">미리보기</button>
+                            <button class="delete-btn">삭제</button>
+                        </div>
+                    `;
+                    
+                    fileItem.querySelector('.view-btn').addEventListener('click', () => {
+                        this.viewFile(file.id);
+                    });
+                    
+                    fileItem.querySelector('.delete-btn').addEventListener('click', () => {
+                        this.confirmDelete(file.id);
+                    });
+                    
+                    filesList.appendChild(fileItem);
+                });
+            }
+
+            // 파일 보기
+            viewFile(fileId) {
+                const file = this.uploadedFiles.find(f => f.id === fileId);
+                if (file) {
+                    this.selectedFile = file;
+                    document.getElementById('previewBtn').style.display = 'inline-block';
+                    this.switchView('preview');
+                    this.showPreview(file);
+                }
+            }
+
+            // 미리보기 표시
+            showPreview(file) {
+                const title = document.getElementById('previewTitle');
+                const info = document.getElementById('previewInfo');
+                const content = document.getElementById('previewContent');
+
+                title.textContent = `👁️ ${file.name}`;
+                
+                const typeText = file.type === 'template' ? '템플릿' : 
+                                file.type === 'payroll' ? '급여대장' : '기타';
+
+                info.innerHTML = `
+                    <span>업로드: ${file.uploadDate.toLocaleString()}</span>
+                    <span>크기: ${(file.size / 1024).toFixed(1)} KB</span>
+                    <span class="file-type-badge ${file.type}">${typeText}</span>
+                `;
+
+                content.innerHTML = '';
+
+                Object.keys(file.sheets).forEach(sheetName => {
+                    const sheetDiv = document.createElement('div');
+                    sheetDiv.className = 'sheet-preview';
+
+                    const sheetData = file.sheets[sheetName];
+                    const maxRows = Math.min(25, sheetData.length); // 25행까지 표시
+
+                    let tableHTML = `
+                        <h3 style="margin: 0; padding: 1rem; background: #f8f9fa; border-bottom: 1px solid #e0e0e0;">📄 ${sheetName}</h3>
+                        <div style="overflow: auto; max-height: 500px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                <tbody>
+                    `;
+
+                    for (let i = 0; i < maxRows; i++) {
+                        const row = sheetData[i] || [];
+                        const rowClass = i === 0 ? 'style="background: #f8f9fa; font-weight: 600;"' : '';
+                        tableHTML += `<tr ${rowClass}>`;
+                        
+                        const maxCols = Math.min(10, row.length);
+                        for (let j = 0; j < maxCols; j++) {
+                            const cell = row[j] !== null && row[j] !== undefined ? String(row[j]) : '';
+                            tableHTML += `<td style="padding: 0.5rem; border-bottom: 1px solid #f0f0f0; white-space: nowrap;">${cell}</td>`;
+                        }
+                        tableHTML += '</tr>';
+                    }
+
+                    tableHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    if (sheetData.length > maxRows) {
+                        tableHTML += `<p style="padding: 1rem; text-align: center; color: #666; margin: 0;">... 외 ${sheetData.length - maxRows}행 더 있습니다 (총 ${sheetData.length}행)</p>`;
+                    }
+
+                    sheetDiv.innerHTML = tableHTML;
+                    sheetDiv.style.cssText = 'background: white; margin-bottom: 2rem; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+                    content.appendChild(sheetDiv);
+                });
+            }
+
+            // 파일 삭제 확인
+            confirmDelete(fileId) {
+                const file = this.uploadedFiles.find(f => f.id === fileId);
+                if (file && confirm(`${file.name}을 삭제하시겠습니까?`)) {
+                    this.deleteFile(fileId);
+                }
+            }
+
+            // 현재 파일 삭제
+            deleteCurrentFile() {
+                if (this.selectedFile && confirm(`${this.selectedFile.name}을 삭제하시겠습니까?`)) {
+                    this.deleteFile(this.selectedFile.id);
+                }
+            }
+
+            // 파일 삭제
+            deleteFile(fileId) {
+                this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileId);
+                
+                if (this.selectedFile && this.selectedFile.id === fileId) {
+                    this.selectedFile = null;
+                    document.getElementById('previewBtn').style.display = 'none';
+                    this.switchView('dashboard');
+                }
+
+                this.saveData();
+                this.updateUI();
+                this.showNotification('파일이 삭제되었습니다.', 'info');
+            }
+
+            // PayPulse 연동
+            exportToPayPulse() {
+                if (!this.selectedFile) return;
+
+                const exportData = {
+                    fileName: this.selectedFile.name,
+                    type: this.selectedFile.type,
+                    sheets: this.selectedFile.sheets,
+                    uploadDate: this.selectedFile.uploadDate
+                };
+
+                const paypulseData = JSON.parse(localStorage.getItem('paypulse_integrated_data') || '[]');
+                paypulseData.push({
+                    ...exportData,
+                    exportDate: new Date(),
+                    status: 'integrated'
+                });
+                localStorage.setItem('paypulse_integrated_data', JSON.stringify(paypulseData));
+
+                this.showNotification('데이터가 PayPulse 시스템에 연동되었습니다! 🚀', 'success');
+            }
+
+            // 알림 표시
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.classList.add('show');
+                }, 100);
+
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+
+            // 데이터 저장
+            saveData() {
+                try {
+                    localStorage.setItem('paypulse_uploaded_files', JSON.stringify(this.uploadedFiles));
+                } catch (error) {
+                    console.error('데이터 저장 오류:', error);
+                }
+            }
+
+            // 데이터 로드
+            loadSavedData() {
+                try {
+                    const savedFiles = localStorage.getItem('paypulse_uploaded_files');
+
+                    if (savedFiles) {
+                        this.uploadedFiles = JSON.parse(savedFiles).map(file => ({
+                            ...file,
+                            uploadDate: new Date(file.uploadDate)
+                        }));
+                    }
+
+                    if (this.uploadedFiles.length > 0) {
+                        document.getElementById('previewBtn').style.display = 'inline-block';
+                    }
+                } catch (error) {
+                    console.error('데이터 로드 오류:', error);
+                    this.uploadedFiles = [];
+                }
+            }
+        }
+
+        // 앱 초기화
+        let dataManager;
+        document.addEventListener('DOMContentLoaded', function() {
+            // XLSX 라이브러리 로드 확인
+            if (typeof XLSX === 'undefined') {
+                console.error('XLSX 라이브러리가 로드되지 않았습니다.');
+                alert('XLSX 라이브러리 로딩 실패. 페이지를 새로고침해주세요.');
+                return;
+            }
+
+            dataManager = new PayPulseDataManager();
+            console.log('PayPulse 데이터 관리자 초기화 완료');
+        });
+    </script>
+</body>
+</html>

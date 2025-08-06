@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse 데이터 관리</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="paypulse-style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 헤더 -->
+        <header class="pdm-header">
+            <div class="header-content">
+                <h1>📊 PayPulse 데이터 관리</h1>
+                <p>스마트한 급여 데이터 관리 시스템</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">등록 직원</span>
+                    <span class="stat-value" id="totalEmployees">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">총 급여</span>
+                    <span class="stat-value" id="totalSalary">0원</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 네비게이션 -->
+        <nav class="pdm-navigation">
+            <button class="nav-btn active" data-view="dashboard">🏠 대시보드</button>
+            <button class="nav-btn" data-view="upload">📤 업로드</button>
+            <button class="nav-btn" data-view="history">📋 히스토리</button>
+            <button class="nav-btn" data-view="preview" id="previewBtn" style="display: none;">👁️ 미리보기</button>
+        </nav>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="pdm-content">
+            <!-- 대시보드 뷰 -->
+            <div id="dashboardView" class="view-container">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>📁 업로드된 파일</h3>
+                        <div class="file-count" id="fileCount">0개</div>
+                        <div class="file-types">
+                            <span>템플릿: <span id="templateCount">0</span></span>
+                            <span>급여대장: <span id="payrollCount">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>👥 직원 현황</h3>
+                        <div class="employee-stats">
+                            <div>총 <span id="employeeCount">0</span>명</div>
+                            <div><span id="departmentCount">0</span>개 부서</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3>💰 급여 현황</h3>
+                        <div class="salary-stats">
+                            <div>총액: <span id="totalAmount">0</span>원</div>
+                            <div>평균: <span id="avgAmount">0</span>원</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card quick-upload">
+                        <h3>⚡ 빠른 업로드</h3>
+                        <button class="quick-upload-btn" onclick="showUploadView()">
+                            새 파일 업로드
+                        </button>
+                    </div>
+                </div>
+
+                <div class="recent-files" id="recentFiles" style="display: none;">
+                    <h3>최근 업로드된 파일</h3>
+                    <div class="recent-files-list" id="recentFilesList"></div>
+                </div>
+            </div>
+
+            <!-- 업로드 뷰 -->
+            <div id="uploadView" class="view-container" style="display: none;">
+                <div class="upload-container">
+                    <h2>📤 파일 업로드</h2>
+                    
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <h3>파일을 드래그하거나 클릭하여 업로드</h3>
+                            <p>Excel (.xlsx, .xls), CSV 파일을 지원합니다</p>
+                            <button class="upload-btn" onclick="selectFile()">파일 선택</button>
+                        </div>
+                        <div class="uploading" id="uploadingIndicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>업로드 중...</p>
+                        </div>
+                    </div>
+
+                    <!-- 숨겨진 파일 입력 -->
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+                    <div class="upload-guide">
+                        <h4>📋 업로드 가이드</h4>
+                        <ul>
+                            <li>Excel 파일(.xlsx, .xls) 또는 CSV 파일을 업로드할 수 있습니다</li>
+                            <li>파일명에 "템플릿"이 포함되면 템플릿으로 자동 분류됩니다</li>
+                            <li>파일명에 "급여"가 포함되면 급여대장으로 자동 분류됩니다</li>
+                            <li>업로드된 파일은 즉시 미리보기에서 확인할 수 있습니다</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 히스토리 뷰 -->
+            <div id="historyView" class="view-container" style="display: none;">
+                <h2>📋 업로드 히스토리</h2>
+                
+                <div class="empty-state" id="emptyState">
+                    <p>아직 업로드된 파일이 없습니다.</p>
+                    <button class="upload-btn" onclick="showUploadView()">
+                        첫 번째 파일 업로드하기
+                    </button>
+                </div>
+
+                <div class="files-list" id="filesList" style="display: none;"></div>
+            </div>
+
+            <!-- 미리보기 뷰 -->
+            <div id="previewView" class="view-container" style="display: none;">
+                <div class="preview-header">
+                    <h2 id="previewTitle">👁️ 파일 미리보기</h2>
+                    <div class="preview-info" id="previewInfo"></div>
+                </div>
+
+                <div class="preview-content" id="previewContent"></div>
+
+                <div class="preview-actions">
+                    <button class="delete-btn" onclick="deleteCurrentFile()">
+                        🗑️ 파일 삭제
+                    </button>
+                    <button class="export-btn" onclick="exportToPayPulse()">
+                        📊 PayPulse 연동
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="paypulse-manager.js"></script>
+</body>
+</html>

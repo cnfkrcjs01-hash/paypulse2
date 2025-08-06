@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse 데이터 관리</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="PayPulseDataManager.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 헤더 -->
+        <header class="pdm-header">
+            <div class="header-content">
+                <h1>📊 PayPulse 데이터 관리</h1>
+                <p>스마트한 급여 데이터 관리 시스템</p>
+            </div>
+            <!-- 헤더 통계 - 의미있는 정보만 -->
+            <div class="header-stats">
+                <div class="stat-item">
+                    <span class="stat-label">업로드된 파일</span>
+                    <span class="stat-value" id="fileCountHeader">0개</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">최근 업로드</span>
+                    <span class="stat-value" id="lastUploadDate">-</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- 네비게이션 -->
+        <nav class="pdm-navigation">
+            <button class="nav-btn active" data-view="dashboard">🏠 대시보드</button>
+            <button class="nav-btn" data-view="upload">📤 업로드</button>
+            <button class="nav-btn" data-view="history">📋 히스토리</button>
+            <button class="nav-btn" data-view="preview" id="previewBtn" style="display: none;">👁️ 미리보기</button>
+        </nav>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="pdm-content">
+            <!-- 대시보드 뷰 -->
+            <div id="dashboardView" class="view-container">
+                <!-- 대시보드 그리드 - 의미없는 카드 제거 -->
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>📁 업로드된 파일</h3>
+                        <div class="file-count" id="fileCount">0개</div>
+                        <div class="file-types">
+                            <span>템플릿: <span id="templateCount">0</span></span>
+                            <span>급여대장: <span id="payrollCount">0</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>📊 데이터 현황</h3>
+                        <div class="data-overview">
+                            <div>개별 파일별로</div>
+                            <div>데이터를 관리합니다</div>
+                            <div class="data-note">누적 계산하지 않음</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card quick-upload">
+                        <h3>⚡ 빠른 업로드</h3>
+                        <button class="quick-upload-btn" onclick="showUploadView()">
+                            새 파일 업로드
+                        </button>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3>🔍 데이터 분석</h3>
+                        <div class="analysis-info">
+                            <div>각 파일을 개별적으로</div>
+                            <div>미리보기에서 확인하세요</div>
+                            <button class="analysis-btn" onclick="dataManager.switchView('history')">
+                                파일 목록 보기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-files" id="recentFiles" style="display: none;">
+                    <h3>최근 업로드된 파일</h3>
+                    <div class="recent-files-list" id="recentFilesList"></div>
+                </div>
+            </div>
+
+            <!-- 업로드 뷰 -->
+            <div id="uploadView" class="view-container" style="display: none;">
+                <div class="upload-container">
+                    <h2>📤 파일 업로드</h2>
+                    
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <h3>파일을 드래그하거나 클릭하여 업로드</h3>
+                            <p>Excel (.xlsx, .xls), CSV 파일을 지원합니다</p>
+                            <button class="upload-btn" onclick="selectFile()">파일 선택</button>
+                        </div>
+                        <div class="uploading" id="uploadingIndicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>업로드 중...</p>
+                        </div>
+                    </div>
+
+                    <!-- 숨겨진 파일 입력 -->
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+
+                    <div class="upload-guide">
+                        <h4>📋 업로드 가이드</h4>
+                        <ul>
+                            <li>Excel 파일(.xlsx, .xls) 또는 CSV 파일을 업로드할 수 있습니다</li>
+                            <li>파일명에 "템플릿"이 포함되면 템플릿으로 자동 분류됩니다</li>
+                            <li>파일명에 "급여"가 포함되면 급여대장으로 자동 분류됩니다</li>
+                            <li>업로드된 파일은 즉시 미리보기에서 확인할 수 있습니다</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 히스토리 뷰 -->
+            <div id="historyView" class="view-container" style="display: none;">
+                <h2>📋 업로드 히스토리</h2>
+                
+                <div class="empty-state" id="emptyState">
+                    <p>아직 업로드된 파일이 없습니다.</p>
+                    <button class="upload-btn" onclick="showUploadView()">
+                        첫 번째 파일 업로드하기
+                    </button>
+                </div>
+
+                <div class="files-list" id="filesList" style="display: none;"></div>
+            </div>
+
+            <!-- 미리보기 뷰 -->
+            <div id="previewView" class="view-container" style="display: none;">
+                <div class="preview-header">
+                    <h2 id="previewTitle">👁️ 파일 미리보기</h2>
+                    <div class="preview-info" id="previewInfo"></div>
+                </div>
+
+                <div class="preview-content" id="previewContent"></div>
+
+                <div class="preview-actions">
+                    <button class="delete-btn" onclick="deleteCurrentFile()">
+                        🗑️ 파일 삭제
+                    </button>
+                    <button class="export-btn" onclick="exportToPayPulse()">
+                        📊 PayPulse 연동
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="paypulse-manager.js"></script>
+    
+    <script>
+        // PayPulse 데이터 관리자
+        class PayPulseManager {
+            constructor() {
+                this.uploadedFiles = [];
+                this.currentFile = null;
+                this.currentView = 'dashboard';
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateUI();
+                this.loadFromStorage();
+            }
+
+            setupEventListeners() {
+                // 네비게이션 버튼
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const view = e.target.dataset.view;
+                        if (view) this.switchView(view);
+                    });
+                });
+
+                // 파일 입력
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) {
+                    fileInput.addEventListener('change', (e) => {
+                        if (e.target.files[0]) {
+                            this.handleFileUpload(e.target.files[0]);
+                        }
+                    });
+                }
+
+                // 드래그 앤 드롭
+                const uploadZone = document.getElementById('uploadZone');
+                if (uploadZone) {
+                    uploadZone.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        uploadZone.classList.add('dragover');
+                    });
+
+                    uploadZone.addEventListener('dragleave', () => {
+                        uploadZone.classList.remove('dragover');
+                    });
+
+                    uploadZone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        uploadZone.classList.remove('dragover');
+                        const files = Array.from(e.dataTransfer.files);
+                        const excelFile = files.find(f => 
+                            f.name.endsWith('.xlsx') || f.name.endsWith('.xls') || f.name.endsWith('.csv')
+                        );
+                        if (excelFile) {
+                            this.handleFileUpload(excelFile);
+                        }
+                    });
+                }
+            }
+
+            // 🎯 완전히 개선된 UI 업데이트
+            updateUI() {
+                // 헤더 통계 - 의미없는 누적 데이터는 '-'로 표시
+                document.getElementById('totalEmployees').textContent = '-';
+                document.getElementById('totalSalary').textContent = '-';
+
+                // 대시보드 - 파일 정보만 의미있게 표시
+                document.getElementById('fileCount').textContent = this.uploadedFiles.length + '개';
+                document.getElementById('templateCount').textContent = this.uploadedFiles.filter(f => f.type === 'template').length;
+                document.getElementById('payrollCount').textContent = this.uploadedFiles.filter(f => f.type === 'payroll').length;
+
+                // 의미없는 누적 데이터는 '-'로 표시
+                document.getElementById('employeeCount').textContent = '-';
+                document.getElementById('departmentCount').textContent = '-';
+                document.getElementById('totalAmount').textContent = '-';
+                document.getElementById('avgAmount').textContent = '-';
+
+                // 최근 파일 목록 업데이트
+                this.updateRecentFiles();
+                this.updateHistoryView();
+            }
+
+            updateRecentFiles() {
+                const recentFilesContainer = document.getElementById('recentFiles');
+                const recentFilesList = document.getElementById('recentFilesList');
+                
+                if (this.uploadedFiles.length > 0) {
+                    recentFilesContainer.style.display = 'block';
+                    const recentFiles = this.uploadedFiles.slice(-3);
+                    recentFilesList.innerHTML = recentFiles.map(file => `
+                        <div class="recent-file-item">
+                            <div class="file-info">
+                                <span class="file-name">${file.name}</span>
+                                <span class="file-date">${file.uploadDate.toLocaleDateString()}</span>
+                            </div>
+                            <button class="view-btn" onclick="manager.viewFile('${file.id}')">보기</button>
+                        </div>
+                    `).join('');
+                } else {
+                    recentFilesContainer.style.display = 'none';
+                }
+            }
+
+            updateHistoryView() {
+                const emptyState = document.getElementById('emptyState');
+                const filesList = document.getElementById('filesList');
+
+                if (this.uploadedFiles.length === 0) {
+                    emptyState.style.display = 'block';
+                    filesList.style.display = 'none';
+                } else {
+                    emptyState.style.display = 'none';
+                    filesList.style.display = 'block';
+                    filesList.innerHTML = this.uploadedFiles.map(file => `
+                        <div class="file-item">
+                            <div class="file-info">
+                                <div class="file-header">
+                                    <span class="file-type-badge ${file.type}">
+                                        ${file.type === 'template' ? '템플릿' : file.type === 'payroll' ? '급여대장' : '기타'}
+                                    </span>
+                                    <h4>${file.name}</h4>
+                                </div>
+                                <div class="file-details">
+                                    <span>크기: ${(file.size / 1024).toFixed(1)} KB</span>
+                                    <span>업로드: ${file.uploadDate.toLocaleString()}</span>
+                                    <span>시트: ${file.sheets ? Object.keys(file.sheets).length : 1}개</span>
+                                </div>
+                            </div>
+                            <div class="file-actions">
+                                <button class="view-btn" onclick="manager.viewFile('${file.id}')">미리보기</button>
+                                <button class="delete-btn" onclick="manager.deleteFile('${file.id}')">삭제</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            async handleFileUpload(file) {
+                this.showUploading(true);
+
+                try {
+                    // 파일 타입 감지
+                    let fileType = 'other';
+                    if (file.name.includes('템플릿') || file.name.includes('template')) {
+                        fileType = 'template';
+                    } else if (file.name.includes('급여') || file.name.includes('payroll')) {
+                        fileType = 'payroll';
+                    }
+
+                    // Excel 파일 읽기
+                    const arrayBuffer = await file.arrayBuffer();
+                    let sheets = {};
+                    
+                    if (file.name.endsWith('.csv')) {
+                        const text = await file.text();
+                        const rows = text.split('\n').map(row => row.split(','));
+                        sheets['Sheet1'] = rows;
+                    } else {
+                        // Excel 처리 (SheetJS 사용)
+                        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        workbook.SheetNames.forEach(sheetName => {
+                            const worksheet = workbook.Sheets[sheetName];
+                            sheets[sheetName] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        });
+                    }
+
+                    const uploadedFile = {
+                        id: Date.now().toString(),
+                        name: file.name,
+                        size: file.size,
+                        uploadDate: new Date(),
+                        type: fileType,
+                        sheets: sheets
+                    };
+
+                    this.uploadedFiles.push(uploadedFile);
+                    this.currentFile = uploadedFile;
+                    this.saveToStorage();
+                    this.updateUI();
+                    
+                    // 미리보기로 자동 이동
+                    this.switchView('preview');
+                    
+                } catch (error) {
+                    console.error('파일 업로드 오류:', error);
+                    alert('파일 업로드 중 오류가 발생했습니다.');
+                } finally {
+                    this.showUploading(false);
+                }
+            }
+
+            switchView(viewName) {
+                // 모든 뷰 숨기기
+                document.querySelectorAll('.view-container').forEach(view => {
+                    view.style.display = 'none';
+                });
+
+                // 네비게이션 버튼 상태 업데이트
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // 선택된 뷰 보이기
+                const targetView = document.getElementById(viewName + 'View');
+                if (targetView) {
+                    targetView.style.display = 'block';
+                }
+
+                // 선택된 버튼 활성화
+                const targetBtn = document.querySelector(`[data-view="${viewName}"]`);
+                if (targetBtn) {
+                    targetBtn.classList.add('active');
+                }
+
+                this.currentView = viewName;
+
+                // 미리보기 버튼 표시/숨기기
+                const previewBtn = document.getElementById('previewBtn');
+                if (previewBtn) {
+                    previewBtn.style.display = this.currentFile ? 'block' : 'none';
+                }
+
+                // 뷰별 추가 처리
+                if (viewName === 'preview' && this.currentFile) {
+                    this.showPreview(this.currentFile);
+                }
+            }
+
+            showPreview(file) {
+                document.getElementById('previewTitle').textContent = `👁️ ${file.name}`;
+                
+                const previewInfo = document.getElementById('previewInfo');
+                previewInfo.innerHTML = `
+                    <span>업로드: ${file.uploadDate.toLocaleString()}</span>
+                    <span>크기: ${(file.size / 1024).toFixed(1)} KB</span>
+                    <span class="type-badge ${file.type}">
+                        ${file.type === 'template' ? '템플릿' : file.type === 'payroll' ? '급여대장' : '기타'}
+                    </span>
+                `;
+
+                const previewContent = document.getElementById('previewContent');
+                previewContent.innerHTML = Object.keys(file.sheets).map(sheetName => `
+                    <div class="sheet-preview">
+                        <h3>📄 ${sheetName}</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <tbody>
+                                    ${file.sheets[sheetName].slice(0, 10).map((row, rowIndex) => `
+                                    <tr class="${rowIndex === 0 ? 'header-row' : ''}">
+                                        ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+                                    </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            ${file.sheets[sheetName].length > 10 ? `
+                            <p class="more-data">... 외 ${file.sheets[sheetName].length - 10}행 더 있습니다</p>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            viewFile(fileId) {
+                const file = this.uploadedFiles.find(f => f.id === fileId);
+                if (file) {
+                    this.currentFile = file;
+                    this.switchView('preview');
+                }
+            }
+
+            deleteFile(fileId) {
+                const file = this.uploadedFiles.find(f => f.id === fileId);
+                if (file && confirm(`${file.name}을 삭제하시겠습니까?`)) {
+                    this.uploadedFiles = this.uploadedFiles.filter(f => f.id !== fileId);
+                    if (this.currentFile?.id === fileId) {
+                        this.currentFile = null;
+                        this.switchView('dashboard');
+                    }
+                    this.saveToStorage();
+                    this.updateUI();
+                }
+            }
+
+            showUploading(show) {
+                const uploadContent = document.querySelector('.upload-content');
+                const uploadingIndicator = document.getElementById('uploadingIndicator');
+                
+                if (uploadContent && uploadingIndicator) {
+                    uploadContent.style.display = show ? 'none' : 'block';
+                    uploadingIndicator.style.display = show ? 'block' : 'none';
+                }
+            }
+
+            saveToStorage() {
+                try {
+                    localStorage.setItem('payPulseFiles', JSON.stringify(this.uploadedFiles.map(file => ({
+                        ...file,
+                        uploadDate: file.uploadDate.toISOString()
+                    }))));
+                } catch (error) {
+                    console.error('저장 오류:', error);
+                }
+            }
+
+            loadFromStorage() {
+                try {
+                    const saved = localStorage.getItem('payPulseFiles');
+                    if (saved) {
+                        this.uploadedFiles = JSON.parse(saved).map(file => ({
+                            ...file,
+                            uploadDate: new Date(file.uploadDate)
+                        }));
+                        this.updateUI();
+                    }
+                } catch (error) {
+                    console.error('로드 오류:', error);
+                }
+            }
+        }
+
+        // 전역 함수들
+        function selectFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        function showUploadView() {
+            manager.switchView('upload');
+        }
+
+        function deleteCurrentFile() {
+            if (manager.currentFile) {
+                manager.deleteFile(manager.currentFile.id);
+            }
+        }
+
+        function exportToPayPulse() {
+            alert('PayPulse 연동 기능은 추후 구현 예정입니다.');
+        }
+
+        // 매니저 초기화
+        const manager = new PayPulseManager();
+        
+        console.log('🎯 PayPulse 데이터 관리 시스템이 로드되었습니다!');
+    </script>
+</body>
+</html>
