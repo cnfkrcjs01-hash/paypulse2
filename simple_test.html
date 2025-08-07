@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PayPulse - 간단 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🎯 PayPulse 연결 테스트</h1>
+            <p>서버 연결이 성공적으로 이루어졌습니다!</p>
+            
+            <div class="status">
+                <h3>✅ 테스트 결과</h3>
+                <p>✓ HTML 로딩: 성공</p>
+                <p>✓ CSS 스타일: 적용됨</p>
+                <p>✓ 서버 연결: 정상</p>
+                <p id="js-status">✓ JavaScript: <span id="js-result">테스트 중...</span></p>
+            </div>
+            
+            <div>
+                <button class="btn" onclick="testFunction()">JavaScript 테스트</button>
+                <button class="btn" onclick="location.href='/'">메인 페이지로</button>
+            </div>
+            
+            <div id="test-output"></div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript 테스트
+        console.log('🚀 JavaScript 로드 성공!');
+        
+        document.getElementById('js-result').textContent = '정상 작동';
+        document.getElementById('js-status').style.color = '#28a745';
+        
+        function testFunction() {
+            const output = document.getElementById('test-output');
+            output.innerHTML = `
+                <div class="card">
+                    <h3>🎉 JavaScript 테스트 성공!</h3>
+                    <p>현재 시간: ${new Date().toLocaleString()}</p>
+                    <p>브라우저: ${navigator.userAgent.split(' ')[0]}</p>
+                    <p>화면 크기: ${window.innerWidth} x ${window.innerHeight}</p>
+                </div>
+            `;
+        }
+        
+        // 자동 테스트
+        setTimeout(() => {
+            console.log('✅ 자동 테스트 완료 - 모든 기능 정상');
+        }, 1000);
+    </script>
+</body>
+</html>

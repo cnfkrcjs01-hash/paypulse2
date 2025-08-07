@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.App {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+/* 추가 커스텀 스타일 */
+.analysis-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.analysis-card:hover {
+  transform: translateY(-2px);
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+} 
